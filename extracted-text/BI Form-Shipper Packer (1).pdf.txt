@@ -1,0 +1,120 @@
+
+--- Page 1 ---
+Department of Veterans Affairs
+VHA 106A WMC HROO PerSec Contractor Team
+CONTRACTOR REQUEST
+(Email to: VHAWMCPerSecContractor@va.gov)(Make sure to encrypt only or password protect)
+CONTRACT INFORMATION
+VA Contracting Officer Name & Email:
+COR Name & Email:
+Contract End Date (Including Options):
+VISN & Station#:
+Purchase/Task Order or Contract Number:
+Contractor Position Description:
+Investigation Level (SAC/Tier 1/Tier 2/Tier 4):
+Contract Company Name (Subcontractor):
+Contract Company Address:
+Contractor POC Name & Phone:
+Contractor POC Email:
+Contracting Officer/COR Signature:
+***This signature verifies that an official contract is in place prior to processing the applicants for badging***
+Contractor Personal Identifiable Information
+--- Page 2 ---
+Department of Veterans Affairs
+VHA 106A WMC HROO PerSec Contractor Team
+VHAWMCPerSecContractor@va.gov
+VHA 106A WMC HROO PerSec Contractor Team SERVICES
+OVERVIEW
+The VHA 106A WMC HROO PerSec Contractor Team offers comprehensive services which ensures that
+contractor security requirements are met in accordance with OPM and federal regulations from initiation to
+completion.
+Communication is maintained between the team POC, the contracting officer, the contracting officer
+representative (COR) and the Contracting company point-of-contact at all times during the process. Due to
+PII concerns, personnel not listed on the Contractor Request Form will be sent statuses from the Team POC.
+If another entity requires this information, they must work through the CO, COR or Company POC. This
+service provided includes the below:
+Fingerprint adjudication:
+o This involves a thorough background screening and adjudication of fingerprint along with
+any self- declared information. The National Criminal History Check (NCHC) Form will be sent to
+all contacts via email once the investigation is scheduled with the Defense Counterintelligence and
+Security Agency (DCSA).
+ Existing investigations:
+o Verifying existing investigation information and collecting the required documents for reciprocity.
+The required documentation would include the OF306 Form and Self-Certification Form. These
+documents would be provided upon confirmation of investigation through DCSA's Portal.
+ New investigations:
+o Upon receipt of the Contract Security Services Request Packet and all required documents our office
+will enter required applicants into the eApp system, review, return or release, and monitor the
+investigation progress through completion.
+ PIV Badges:
+o Our office can only adjudicate PIV badges at this time. The COR on the contract or local personnel
+must sponsor the contractor/s in the PIV portal prior to adjudication by this office.
+To begin the process, please follow the below guidelines:
+1. Upon notification of contract award, COR/local sponsor must ensure to pre-sponsor applicant fin
+USAccess for fingerprints. Applicant must take 2 forms of ID to their print appointment.
+2. Contracting officers / CORs complete and digitally sign the Contractor Request Form in its entirety.
+All information is required. The packet will be rejected if this form is not complete or does not contain
+the CO/COR signature.
+3. Have employees complete all required documentation based on their risk level.
+4. Submit complete packet to VHAWMCPerSecContractor@va.gov encrypted. Incomplete packets will be
+rejected and returned. Complete packets will be assigned to a team member within 5 to 10 business
+days dependent on workload. Subject line for the request submission email should be formatted as
+shown below.
+a. New Request Packet - Contracted Company 36C00000D0000 / 999-C202222
+b. Status Request – Contracted Company 36C00000D0000 / 999-C20222 submitted on
+00/00/0000
+5. Do not submit new requests and additions more than once as this will result in duplicate assignments
+and wasted time. If you have not received a response to your request within 5-10 business days, send a
+status request to the mailbox using the above format.
+6. If there is a change in the contracted personnel (resignation, declined appointment, etc.) immediately
+notify the team member handling your request. The cancellation must be submitted via email.
+7. Send any additions to our team member that is assigned the contract. We cc the sender of this packet
+on that assignment so that you can work directly with that team member on all associated actions to
+include re-issuances, turnover, questions, concerns, statuses, etc. If the packet is already assigned
+and was not forwarded to the assigned member, we will reject that packet. This is so that we can
+assign the new contracts as fast as possible for you.
+--- Page 3 ---
+Department of Veterans Affairs
+VHA 106A WMC HROO PerSecContractor Team
+CONTRACT SECURITY SERVICES REQUEST - INSTRUCTIONS
+Purpose: The Contract Security Services Request is submitted to VHA 106A WMC HROO PerSecContractor Team to initiate the contract
+security verification process. By submitting this form, our office will ensure that everyone listed have been fingerprinted, the fingerprints are
+adjudicated, if necessary, background investigations are initiated or existing background investigations are current and PIV badges are
+adjudicated. This form should be completed and signed by the contracting officer. Please refer to the instructions below when completing the
+Contract Security Services Request Form #1.
+Contract Information Section
+Contracting Officer Name & Email: Please provide the post-award contracting officer handling this contract and their email.
+COR Name & Email: Please list the Contracting Officer Representative (previously the Contracting Officer Technical Representative) and email.
+The COR is the liaison between the contracting officer and contracted company.
+Contract End Date: Please list the date in which the contract ends including all options to extend (for PIV badge expiration).
+VISN & Station Number: Please indicate the VISN and facility station number where the work is being performed/facility to be billed.
+Purchase Order, Task Order and Contract Numbers: Please list the purchase order number, task order and the contract numbers. Our
+database is based on tracking contracts by station. Should the task order number change at fiscal year-end, please indicate on any future
+requests by including any/all related numbers in parenthesis next to the new numbers.
+Contractor Position Description: Please provide a position title for all individuals (ex: physician, consultant, electrician).
+Investigation Level: Please indicate the background security requirements as provided by the PDT (Position Designation Tool)
+https://pdt.nbis.mil This would include background screening or Fingerprint Only (SAC), low-level investigation (Tier 1), moderate-level
+investigation (Tier 2) and high-level investigation (Tier 4). Please note that PIV-I badges (contract under 180-days) require at minimum a SAC,
+full PIV badges (over 180-days) require a minimum a T1. If it is Tier 2 or 4, please provide a copy of the PDT to justify a higher-level investigation.
+Contract Company Name: Please provide the name of the contracting company that will be providing the work under the task
+order. Please provide subcontractors in parenthesis.
+Contractor Address: Please provide the contracting company address.
+Contractor POC Name & Phone: Please provide the main point-of-contact for the contracting company and contact information. This person may
+be contacted to provide additional information or documents in the process. All communication with this individual
+will include the contracting officer and COR.
+Contractor POC Email: Please provide the email address for the company point-of-contact. This email will be included in all correspondence
+regarding investigation and PIV processing.
+Contracting Officer Signature: All contracts must be signed by the contract officer or the contracting officer representative (COR). This signature
+verifies that an official contract is in place prior to processing the applicants for investigation and badging.
+Contractor Employee Information Section
+All information must be completed in the Contractor Personal Identifiable Information Section
+N O T E: For foreign- born individuals, Please Check if you are a permanent resident or foreign national.
+For investigations to be conducted and eligiblity for a PIV credential, individuals must have lived in the United
+States for 3 consecutive years.
+All background investigation request forms and supporting documents must be .pdf files and the
+below naming convention used:
+Station #_last name last four of SSN_form name
+Example:
+573_Jones1234_REQ
+573_Jones1234_306
+573_jones1234_SC

@@ -1,0 +1,106 @@
+﻿VETPRO Enrollment Form       FEDERAL:    NEW: 
+		CONTRACTOR:    CURRENT:     
+Bottom of Form
+Top of Form
+
+
+*SSN:
+- - 
+Request Date:
+ 
+
+Title:
+
+  Requesting Facility:
+    
+
+*First Name:
+
+*Birth Date:
+
+
+Middle Name:
+
+Birth City:
+
+
+*Last Name:
+
+Birth State:
+
+
+Suffix:
+ (Jr., Sr.,II, III)
+Birth Country:
+
+
+*Gender:
+MaleFemale
+U.S. Citizen
+
+
+*Occupation:
+
+Other Occupation:
+
+
+Bottom of Form
+
+Preferred Address
+BusinessResidence
+Secondary Address
+BusinessResidence
+*Address(1):
+
+Address(1):
+
+Address(2):
+
+Address(2):
+
+*City:
+
+City:
+
+*State:
+
+State:
+
+*Zipcode:
+
+Zipcode:
+
+*Country:
+
+Country:
+
+*Phone:
+
+Phone:
+
+Cell:
+
+
+
+Fax:
+
+Fax:
+
+*EMail:
+
+EMail:
+
+
+VETPRO REQUIRES AN E-MAIL ADDRESS .  ALL ENROLLMENT PACKAGES WILL BE
+	SENT VIA E-MAIL.
+
+INSTRUCTIONS:
+    1. Request Date: enter the day you are filling out the Enrollment Form
+    2. Facility: enter station/location requesting to hire/federal or contractor/ new or current
+    3. Occupation:  enter listed occupation, if not listed select other and go to Other Occupation square
+    4. Other Occupation:  enter the occupation not listed in Occupation (example: GS-06 Pharmacy Technician)
+    5. Secondary Address:  leave blank if no secondary address
+    6. Email:  verify e-mail address is correct
+    7. VetPro Application will be sent to the above e-mail address.
+
+
