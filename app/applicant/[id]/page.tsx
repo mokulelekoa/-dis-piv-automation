@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
-import { CheckCircle2, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+import { CheckCircle2, AlertTriangle, PenLine, ArrowRight } from 'lucide-react'
 import { getApplicant, packetCompleteness, totalMissingCount } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
 import PacketForms from '@/app/components/PacketForms'
@@ -41,6 +42,18 @@ export default async function ApplicantSelfReview({ params }: { params: Promise<
           </div>
           <div className={`text-lg font-black ${ready ? 'text-green-700' : 'text-amber-700'}`}>{pct}%</div>
         </div>
+
+        <Link href={`/applicant/${id}/questionnaire`}
+          className="mb-6 flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 transition hover:border-blue-300 hover:bg-blue-100">
+          <PenLine size={22} className="flex-shrink-0 text-blue-600" />
+          <div className="flex-1">
+            <div className="text-sm font-bold text-blue-900">Fill out your forms here</div>
+            <div className="mt-0.5 text-xs text-blue-700">
+              Answer a few questions and we&rsquo;ll generate your pre-filled VA forms to print, sign, and upload.
+            </div>
+          </div>
+          <ArrowRight size={18} className="flex-shrink-0 text-blue-600" />
+        </Link>
 
         <PacketForms applicant={applicant} />
 

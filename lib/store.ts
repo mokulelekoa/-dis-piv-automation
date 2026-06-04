@@ -11,6 +11,8 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 import { type PacketRole, requiredFormsForRole, getSpec } from './forms/specs'
 import type { AnalysisResult } from './forms/analyze'
+import type { CandidateProfile } from './profile'
+import type { PacketAnswers } from './forms/questions'
 
 export type PacketStatus =
   | 'DRAFT'
@@ -39,6 +41,10 @@ export interface Applicant {
   station: string
   status: PacketStatus
   forms: FormState[]
+  /** Identity an ID proves (Phase 1). Persisted so the portal can re-fill forms. */
+  profile?: CandidateProfile
+  /** Human-only declarations (OF-306 background, break-in-service, etc.). */
+  answers?: PacketAnswers
   createdAt: string
   updatedAt: string
 }
@@ -123,6 +129,28 @@ export async function createApplicant(input: {
     updatedAt: now,
   }
   all.push(applicant)
+  await save(all)
+  return applicant
+}
+
+/** Save the candidate profile (ID-derived identity) onto an applicant. */
+export async function saveProfile(applicantId: string, profile: CandidateProfile): Promise<Applicant | null> {
+  const all = await load()
+  const applicant = all.find(a => a.id === applicantId)
+  if (!applicant) return null
+  applicant.profile = profile
+  applicant.updatedAt = new Date().toISOString()
+  await save(all)
+  return applicant
+}
+
+/** Save the human-only questionnaire answers onto an applicant. */
+export async function saveAnswers(applicantId: string, answers: PacketAnswers): Promise<Applicant | null> {
+  const all = await load()
+  const applicant = all.find(a => a.id === applicantId)
+  if (!applicant) return null
+  applicant.answers = answers
+  applicant.updatedAt = new Date().toISOString()
   await save(all)
   return applicant
 }

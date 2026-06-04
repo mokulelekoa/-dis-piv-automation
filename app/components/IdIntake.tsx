@@ -220,7 +220,7 @@ export default function IdIntake() {
               value={profile.ssn}
               onChange={e => update('ssn', e.target.value)}
               placeholder="Only auto-filled from a Social Security card"
-              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
+              className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
             />
             {ssnDetected && (
               <p className="mt-1 flex items-center gap-1.5 text-[11px] text-amber-700">
@@ -302,7 +302,7 @@ function Field<K extends keyof CandidateProfile>({
         disabled={disabled}
         placeholder={placeholder}
         onChange={e => update(k, e.target.value as CandidateProfile[K])}
-        className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30
+        className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30
           ${autoFilled[k] ? 'border-green-300 bg-green-50/40' : 'border-slate-200 bg-white'}
           ${disabled ? 'cursor-not-allowed bg-slate-100 text-slate-400' : ''}`}
       />
