@@ -30,7 +30,9 @@ export default function AdminLogin() {
       blurb="Coordinator access to every candidate's VA onboarding stage, blockers, and packet readiness — in one place."
     >
       <h2 className="text-xl font-black text-dis-navy">Coordinator sign in</h2>
-      <p className="mt-1 text-sm text-slate-500">Use your DIS Consulting credentials.</p>
+      <p className="mt-1 text-sm text-slate-500">
+        Demo preview &mdash; sign-in isn&rsquo;t enforced yet. Any entry opens the console.
+      </p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <Labeled label="Work email" icon={<Mail size={15} className="text-slate-400" />}>
