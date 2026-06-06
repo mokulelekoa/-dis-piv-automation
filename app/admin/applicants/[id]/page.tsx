@@ -3,8 +3,11 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Mail, Hash } from 'lucide-react'
 import { getApplicant, packetCompleteness, totalMissingCount } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
+import { emptyTracker, normalizePosition } from '@/lib/onboarding'
 import { STATUS_LABELS, STATUS_PILL } from '@/app/components/status'
 import PacketForms from '@/app/components/PacketForms'
+import OnboardingTimeline from '@/app/components/OnboardingTimeline'
+import Avatar from '@/app/components/Avatar'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -16,6 +19,7 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
 
   const pct = packetCompleteness(applicant)
   const open = totalMissingCount(applicant)
+  const tracker = applicant.onboarding ?? emptyTracker(normalizePosition(ROLE_LABELS[applicant.role]))
 
   return (
     <main className="min-h-screen bg-slate-100">
@@ -26,12 +30,16 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
 
         <header className="mb-6 rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-xl font-black text-slate-900">{applicant.firstName} {applicant.lastName}</h1>
-              <p className="mt-0.5 text-sm text-slate-500">{ROLE_LABELS[applicant.role]}</p>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
-                {applicant.email && <span className="inline-flex items-center gap-1"><Mail size={11} /> {applicant.email}</span>}
-                <span className="inline-flex items-center gap-1"><Hash size={11} /> Station {applicant.station}</span>
+            <div className="flex items-start gap-4">
+              <Avatar firstName={applicant.firstName} lastName={applicant.lastName} size={56}
+                photoUrl={applicant.photo ? `/api/applicants/${applicant.id}/photo` : undefined} />
+              <div>
+                <h1 className="text-xl font-black text-slate-900">{applicant.firstName} {applicant.lastName}</h1>
+                <p className="mt-0.5 text-sm text-slate-500">{ROLE_LABELS[applicant.role]}</p>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                  {applicant.email && <span className="inline-flex items-center gap-1"><Mail size={11} /> {applicant.email}</span>}
+                  <span className="inline-flex items-center gap-1"><Hash size={11} /> Station {applicant.station}</span>
+                </div>
               </div>
             </div>
             <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_PILL[applicant.status]}`}>
@@ -49,6 +57,10 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
             <div className="text-xs font-semibold text-amber-600">{open === 0 ? 'No open items' : `${open} open`}</div>
           </div>
         </header>
+
+        <div className="mb-6">
+          <OnboardingTimeline tracker={tracker} />
+        </div>
 
         <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-slate-400">Required forms</h2>
         <PacketForms applicant={applicant} />

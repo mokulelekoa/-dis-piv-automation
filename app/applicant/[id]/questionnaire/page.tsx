@@ -33,6 +33,9 @@ export default async function QuestionnairePage({ params }: { params: Promise<{ 
           role={applicant.role}
           initialProfile={applicant.profile ?? null}
           initialAnswers={applicant.answers ?? null}
+          firstName={applicant.firstName}
+          lastName={applicant.lastName}
+          hasPhoto={!!applicant.photo}
         />
       </div>
     </main>

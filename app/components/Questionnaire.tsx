@@ -9,14 +9,18 @@ import {
   BREAK_IN_SERVICE_OPTIONS, validateAnswers, needsBackgroundExplanation,
 } from '@/lib/forms/questions'
 import { requiredFormsForRole, getSpec, type PacketRole } from '@/lib/forms/specs'
+import PhotoUpload from './PhotoUpload'
 
 export default function Questionnaire({
-  applicantId, role, initialProfile, initialAnswers,
+  applicantId, role, initialProfile, initialAnswers, firstName, lastName, hasPhoto,
 }: {
   applicantId: string
   role: PacketRole
   initialProfile: CandidateProfile | null
   initialAnswers: PacketAnswers | null
+  firstName: string
+  lastName: string
+  hasPhoto: boolean
 }) {
   const router = useRouter()
   const [profile, setProfile] = useState<CandidateProfile>(initialProfile ?? emptyProfile())
@@ -63,6 +67,9 @@ export default function Questionnaire({
     <div className="space-y-8">
       {/* Identity */}
       <Section title="Your identity" hint="Pulled from your ID where possible. Confirm everything is correct — these feed every form.">
+        <div className="mb-6">
+          <PhotoUpload applicantId={applicantId} firstName={firstName} lastName={lastName} hasPhoto={hasPhoto} />
+        </div>
         <Grid>
           <Text label="First name" value={profile.firstName} onChange={v => p('firstName', v)} />
           <Text label="Middle name" value={profile.middleName} onChange={v => p('middleName', v)} disabled={profile.hasNoMiddleName}
