@@ -3,6 +3,7 @@ import { listApplicants, packetCompleteness, totalMissingCount, type Applicant }
 import { ROLE_LABELS } from '@/lib/forms/specs'
 import { STATUS_LABELS, STATUS_PILL, formHealth, HEALTH_DOT } from '@/app/components/status'
 import Avatar from '@/app/components/Avatar'
+import BrandHeader from '@/app/components/BrandHeader'
 import {
   type Queue, QUEUE_LABELS, QUEUE_ORDER, BLOCKER_LABELS, STAGE_LABELS,
   emptyTracker, normalizePosition, queuesFor, currentStage, ageAtCurrentStage,
@@ -24,7 +25,9 @@ export default async function AdminDashboard() {
   for (const a of applicants) for (const q of queuesFor(trackerOf(a))) queueCounts[q]++
 
   return (
-    <main className="min-h-screen bg-slate-100">
+    <main className="min-h-screen bg-blue-50">
+      <BrandHeader subtitle="Onboarding Command Center" href="/admin"
+        right={<Link href="/admin/login" className="font-semibold text-white/80 hover:text-white">Sign out</Link>} />
       <div className="mx-auto max-w-6xl px-4 py-10">
         <header className="mb-6">
           <h1 className="text-2xl font-black text-slate-900">CMOP Onboarding Command Center</h1>

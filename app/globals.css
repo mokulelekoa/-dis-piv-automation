@@ -1,26 +1,50 @@
 @import "tailwindcss";
 
+/*
+ * DIS Consulting brand palette (sampled from disconsulting.com):
+ *   navy   #0b243c  · teal #2d6d8e · orange #f18027 · slate-gray #5e626c
+ *   light backgrounds #f7fbff / #f0f4f9 · border #e4e9ec
+ *
+ * The Tailwind `blue` ramp is remapped to DIS navy/teal so existing
+ * blue-* utilities render on-brand. The `accent` ramp is DIS orange,
+ * used for primary calls-to-action.
+ */
+@theme {
+  /* Navy / teal — replaces Tailwind blue */
+  --color-blue-50: #f0f4f9;
+  --color-blue-100: #e4e9ec;
+  --color-blue-200: #c7d3df;
+  --color-blue-300: #9fb3c6;
+  --color-blue-400: #2d6d8e;
+  --color-blue-500: #1c4a6b;
+  --color-blue-600: #0b243c;
+  --color-blue-700: #081a2c;
+  --color-blue-800: #06141f;
+  --color-blue-900: #040d16;
+
+  /* DIS orange — primary CTA accent */
+  --color-accent-50: #fff4ea;
+  --color-accent-100: #ffe2c7;
+  --color-accent-200: #ffd0a3;
+  --color-accent-300: #fbb778;
+  --color-accent-400: #f7a35a;
+  --color-accent-500: #f18027;
+  --color-accent-600: #d96a14;
+  --color-accent-700: #b5560f;
+
+  /* Named brand tokens */
+  --color-dis-navy: #0b243c;
+  --color-dis-teal: #2d6d8e;
+  --color-dis-orange: #f18027;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #f7fbff;
+  --foreground: #0b243c;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }

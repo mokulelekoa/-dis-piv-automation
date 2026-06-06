@@ -256,7 +256,7 @@ export default function IdIntake() {
           </p>
           <button
             type="button"
-            className="flex-shrink-0 rounded-xl bg-blue-600 px-5 py-2 text-sm font-bold text-white hover:bg-blue-700"
+            className="flex-shrink-0 rounded-xl bg-accent-500 px-5 py-2 text-sm font-bold text-white hover:bg-accent-600"
             onClick={() => alert('Phase 3: human-only questionnaire + PDF fill comes next.')}
           >
             Continue

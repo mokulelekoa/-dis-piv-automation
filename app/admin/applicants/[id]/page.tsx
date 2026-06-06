@@ -8,6 +8,7 @@ import { STATUS_LABELS, STATUS_PILL } from '@/app/components/status'
 import PacketForms from '@/app/components/PacketForms'
 import OnboardingTimeline from '@/app/components/OnboardingTimeline'
 import Avatar from '@/app/components/Avatar'
+import BrandHeader from '@/app/components/BrandHeader'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -22,7 +23,8 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
   const tracker = applicant.onboarding ?? emptyTracker(normalizePosition(ROLE_LABELS[applicant.role]))
 
   return (
-    <main className="min-h-screen bg-slate-100">
+    <main className="min-h-screen bg-blue-50">
+      <BrandHeader subtitle="Onboarding Command Center" href="/admin" />
       <div className="mx-auto max-w-3xl px-4 py-10">
         <Link href="/admin" className="mb-5 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-700">
           <ArrowLeft size={14} /> All candidates

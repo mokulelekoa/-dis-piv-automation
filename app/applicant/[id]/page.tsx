@@ -4,6 +4,7 @@ import { CheckCircle2, AlertTriangle, PenLine, ArrowRight } from 'lucide-react'
 import { getApplicant, packetCompleteness, totalMissingCount } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
 import PacketForms from '@/app/components/PacketForms'
+import BrandHeader from '@/app/components/BrandHeader'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -18,7 +19,8 @@ export default async function ApplicantSelfReview({ params }: { params: Promise<
   const ready = open === 0 && pct === 100
 
   return (
-    <main className="min-h-screen bg-slate-100">
+    <main className="min-h-screen bg-blue-50">
+      <BrandHeader subtitle="Your CMOP Packet" />
       <div className="mx-auto max-w-2xl px-4 py-10">
         <header className="mb-6">
           <h1 className="text-2xl font-black text-slate-900">Your CMOP packet</h1>
@@ -44,15 +46,15 @@ export default async function ApplicantSelfReview({ params }: { params: Promise<
         </div>
 
         <Link href={`/applicant/${id}/questionnaire`}
-          className="mb-6 flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 transition hover:border-blue-300 hover:bg-blue-100">
-          <PenLine size={22} className="flex-shrink-0 text-blue-600" />
+          className="mb-6 flex items-center gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 transition hover:border-accent-300 hover:bg-accent-100">
+          <PenLine size={22} className="flex-shrink-0 text-accent-600" />
           <div className="flex-1">
-            <div className="text-sm font-bold text-blue-900">Fill out your forms here</div>
-            <div className="mt-0.5 text-xs text-blue-700">
+            <div className="text-sm font-bold text-dis-navy">Fill out your forms here</div>
+            <div className="mt-0.5 text-xs text-accent-700">
               Answer a few questions and we&rsquo;ll generate your pre-filled VA forms to print, sign, and upload.
             </div>
           </div>
-          <ArrowRight size={18} className="flex-shrink-0 text-blue-600" />
+          <ArrowRight size={18} className="flex-shrink-0 text-accent-600" />
         </Link>
 
         <PacketForms applicant={applicant} />

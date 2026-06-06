@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { getApplicant } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
 import Questionnaire from '@/app/components/Questionnaire'
+import BrandHeader from '@/app/components/BrandHeader'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -14,7 +15,8 @@ export default async function QuestionnairePage({ params }: { params: Promise<{ 
   if (!applicant) notFound()
 
   return (
-    <main className="min-h-screen bg-slate-100">
+    <main className="min-h-screen bg-blue-50">
+      <BrandHeader subtitle="Your CMOP Packet" />
       <div className="mx-auto max-w-2xl px-4 py-10">
         <Link href={`/applicant/${id}`} className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700">
           <ArrowLeft size={14} /> Back to your packet
