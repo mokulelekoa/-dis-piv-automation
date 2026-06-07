@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
-import { promises as fs } from 'fs'
 import { PDFDocument } from 'pdf-lib'
-import { getApplicant, formPath, packetDownloadable, specLabel } from '@/lib/store'
+import { getApplicant, getFormBytes, packetDownloadable, specLabel } from '@/lib/store'
 
 /**
  * GET /api/applicants/[id]/package — merges every stored form PDF into one
@@ -22,7 +21,8 @@ export async function GET(
   try {
     const merged = await PDFDocument.create()
     for (const form of applicant.forms) {
-      const bytes = await fs.readFile(formPath(id, form.specId))
+      const bytes = await getFormBytes(id, form.specId)
+      if (!bytes) continue
       const src = await PDFDocument.load(bytes)
       const pages = await merged.copyPages(src, src.getPageIndices())
       pages.forEach(p => merged.addPage(p))

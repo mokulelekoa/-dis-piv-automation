@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
-import { promises as fs } from 'fs'
-import { getApplicant, savePhoto, photoPath } from '@/lib/store'
+import { getApplicant, savePhoto, getPhotoBytes } from '@/lib/store'
 
 const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
@@ -52,15 +51,13 @@ export async function GET(
   const applicant = await getApplicant(id)
   if (!applicant?.photo) return new Response(null, { status: 404 })
 
-  try {
-    const bytes = await fs.readFile(photoPath(id, applicant.photo.fileName))
-    return new Response(new Blob([bytes as BlobPart], { type: applicant.photo.mime }), {
-      status: 200,
-      headers: { 'Content-Type': applicant.photo.mime, 'Cache-Control': 'no-store' },
-    })
-  } catch {
-    return new Response(null, { status: 404 })
-  }
+  const bytes = await getPhotoBytes(id, applicant.photo.fileName)
+  if (!bytes) return new Response(null, { status: 404 })
+
+  return new Response(new Blob([bytes as BlobPart], { type: applicant.photo.mime }), {
+    status: 200,
+    headers: { 'Content-Type': applicant.photo.mime, 'Cache-Control': 'no-store' },
+  })
 }
 
 export const runtime = 'nodejs'

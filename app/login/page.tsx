@@ -72,10 +72,17 @@ export default function ApplicantLogin() {
 
       <div className="mt-6 rounded-xl border border-slate-200 bg-white px-4 py-3 text-center">
         <p className="text-xs text-slate-500">Starting fresh from an invitation?</p>
-        <a href="/" className="mt-1 inline-block text-sm font-bold text-dis-teal hover:underline">
+        <a href="/start" className="mt-1 inline-block text-sm font-bold text-dis-teal hover:underline">
           Begin a new packet &rarr;
         </a>
       </div>
+
+      <p className="mt-4 text-center text-xs text-slate-400">
+        Administrator?{' '}
+        <a href="/admin/login" className="font-semibold text-dis-navy hover:underline">
+          Sign in to the console
+        </a>
+      </p>
     </AuthShell>
   )
 }

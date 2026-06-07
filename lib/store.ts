@@ -1,14 +1,13 @@
 /**
- * Mock-first applicant store (file-backed JSON under .data/). No DB yet — this
- * is the staging layer that lets the dashboard work end-to-end; a real
- * Postgres/Supabase store drops in behind the same functions later.
+ * Applicant store backed by Supabase: one `applicants` row per candidate (the
+ * full record lives in a jsonb `data` column), plus Storage buckets for the
+ * uploaded form PDFs and profile photos. Server-only.
  *
- * Server-only. Seeded on first read so the dashboard is populated immediately.
+ * Seeded on first read (idempotent, fixed UUIDs) so the dashboard is populated.
  */
 
-import { promises as fs } from 'fs'
-import path from 'path'
 import { randomUUID } from 'crypto'
+import { supabase, FORMS_BUCKET, PHOTOS_BUCKET } from './supabase'
 import { type PacketRole, requiredFormsForRole, getSpec } from './forms/specs'
 import type { AnalysisResult } from './forms/analyze'
 import type { CandidateProfile } from './profile'
@@ -60,24 +59,16 @@ export interface Applicant {
   updatedAt: string
 }
 
-// On Vercel the project directory is read-only; only /tmp is writable. This
-// file store is the prototype's staging layer, so on serverless we fall back to
-// an ephemeral /tmp dir (re-seeded on cold start). A real DB replaces this later.
-const DATA_DIR = process.env.VERCEL ? '/tmp/dis-cmop-data' : path.join(process.cwd(), '.data')
-const DATA_FILE = path.join(DATA_DIR, 'applicants.json')
-const UPLOADS_DIR = path.join(DATA_DIR, 'uploads')
+const TABLE = 'applicants'
 
-/** Absolute path where an applicant's profile photo is stored on disk. */
-export function photoPath(applicantId: string, fileName: string): string {
-  return path.join(UPLOADS_DIR, `${applicantId}-${fileName}`)
+/** Storage object key for an applicant's uploaded form PDF (specId-keyed so a re-upload overwrites). */
+function formKey(applicantId: string, specId: string): string {
+  return `${applicantId}/${specId}.pdf`
 }
 
-/**
- * Absolute path where an applicant's uploaded form PDF is stored. Keyed by
- * specId (not the original file name) so a re-upload overwrites cleanly.
- */
-export function formPath(applicantId: string, specId: string): string {
-  return path.join(UPLOADS_DIR, `${applicantId}-form-${specId}.pdf`)
+/** Storage object key for an applicant's profile photo. */
+function photoKey(applicantId: string, fileName: string): string {
+  return `${applicantId}/${fileName}`
 }
 
 function emptyForms(role: PacketRole): FormState[] {
@@ -268,11 +259,11 @@ function seed(): Applicant[] {
     },
   ]
 
-  return rows.map(r => {
+  return rows.map((r, i) => {
     const forms = emptyForms(r.role)
     r.fill?.(forms)
     return {
-      id: randomUUID(),
+      id: SEED_IDS[i],
       firstName: r.firstName, lastName: r.lastName, email: r.email,
       role: r.role, station: '766', status: r.status, forms,
       onboarding: r.tracker,
@@ -281,36 +272,80 @@ function seed(): Applicant[] {
   })
 }
 
-async function load(): Promise<Applicant[]> {
-  try {
-    const raw = await fs.readFile(DATA_FILE, 'utf8')
-    return JSON.parse(raw) as Applicant[]
-  } catch {
-    const seeded = seed()
-    await save(seeded)
-    return seeded
-  }
+// Stable IDs so the seed upserts idempotently and links stay valid across deploys.
+const SEED_IDS = [
+  'a1000000-0000-4000-8000-000000000001',
+  'a1000000-0000-4000-8000-000000000002',
+  'a1000000-0000-4000-8000-000000000003',
+  'a1000000-0000-4000-8000-000000000004',
+  'a1000000-0000-4000-8000-000000000005',
+  'a1000000-0000-4000-8000-000000000006',
+  'a1000000-0000-4000-8000-000000000007',
+  'a1000000-0000-4000-8000-000000000008',
+  'a1000000-0000-4000-8000-000000000009',
+  'a1000000-0000-4000-8000-00000000000a',
+]
+
+interface Row {
+  id: string
+  email: string | null
+  status: string
+  data: Applicant
+  created_at: string
+  updated_at: string
 }
 
-async function save(applicants: Applicant[]): Promise<void> {
-  await fs.mkdir(DATA_DIR, { recursive: true })
-  await fs.writeFile(DATA_FILE, JSON.stringify(applicants, null, 2), 'utf8')
+function toRow(a: Applicant): Row {
+  return { id: a.id, email: a.email, status: a.status, data: a, created_at: a.createdAt, updated_at: a.updatedAt }
+}
+
+/** Insert the demo seed once if the table is empty. Idempotent via fixed UUIDs. */
+let seedChecked = false
+async function ensureSeeded(): Promise<void> {
+  if (seedChecked) return
+  const { count, error } = await supabase().from(TABLE).select('id', { count: 'exact', head: true })
+  if (error) throw new Error(`store seed-check failed: ${error.message}`)
+  if ((count ?? 0) === 0) {
+    const rows = seed().map(toRow)
+    const { error: insErr } = await supabase().from(TABLE).upsert(rows, { onConflict: 'id', ignoreDuplicates: true })
+    if (insErr) throw new Error(`store seed failed: ${insErr.message}`)
+  }
+  seedChecked = true
+}
+
+async function writeRow(a: Applicant): Promise<void> {
+  const { error } = await supabase().from(TABLE).upsert(toRow(a), { onConflict: 'id' })
+  if (error) throw new Error(`store write failed: ${error.message}`)
+}
+
+/** Load an applicant, mutate it, bump updatedAt, and persist. */
+async function patch(id: string, mutate: (a: Applicant) => void): Promise<Applicant | null> {
+  const applicant = await getApplicant(id)
+  if (!applicant) return null
+  mutate(applicant)
+  applicant.updatedAt = new Date().toISOString()
+  await writeRow(applicant)
+  return applicant
 }
 
 export async function listApplicants(): Promise<Applicant[]> {
-  const all = await load()
-  return [...all].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  await ensureSeeded()
+  const { data, error } = await supabase().from(TABLE).select('data').order('updated_at', { ascending: false })
+  if (error) throw new Error(`store list failed: ${error.message}`)
+  return (data ?? []).map(r => (r as { data: Applicant }).data)
 }
 
 export async function getApplicant(id: string): Promise<Applicant | null> {
-  const all = await load()
-  return all.find(a => a.id === id) ?? null
+  await ensureSeeded()
+  const { data, error } = await supabase().from(TABLE).select('data').eq('id', id).maybeSingle()
+  if (error) throw new Error(`store get failed: ${error.message}`)
+  return (data as { data: Applicant } | null)?.data ?? null
 }
 
 export async function createApplicant(input: {
   firstName: string; lastName: string; email: string; role: PacketRole; station?: string
 }): Promise<Applicant> {
-  const all = await load()
+  await ensureSeeded()
   const now = new Date().toISOString()
   const applicant: Applicant = {
     id: randomUUID(),
@@ -325,8 +360,7 @@ export async function createApplicant(input: {
     createdAt: now,
     updatedAt: now,
   }
-  all.push(applicant)
-  await save(all)
+  await writeRow(applicant)
   return applicant
 }
 
@@ -337,93 +371,86 @@ const ROLE_POSITION_HINT: Record<PacketRole, string> = {
   SHIPPER_PACKER: 'Shipper/Packer',
 }
 
-/** Persist a candidate profile photo: writes bytes to disk + metadata on the applicant. */
+/** Persist a candidate profile photo: uploads bytes to Storage + metadata on the applicant. */
 export async function savePhoto(
   applicantId: string, fileName: string, mime: string, bytes: Uint8Array,
 ): Promise<Applicant | null> {
-  const all = await load()
-  const applicant = all.find(a => a.id === applicantId)
+  const applicant = await getApplicant(applicantId)
   if (!applicant) return null
 
-  await fs.mkdir(UPLOADS_DIR, { recursive: true })
-  // Remove a prior photo if its filename differs, so we don't orphan files.
+  // Remove a prior photo if its key differs, so we don't orphan objects.
   if (applicant.photo && applicant.photo.fileName !== fileName) {
-    await fs.rm(photoPath(applicantId, applicant.photo.fileName), { force: true })
+    await supabase().storage.from(PHOTOS_BUCKET).remove([photoKey(applicantId, applicant.photo.fileName)])
   }
-  await fs.writeFile(photoPath(applicantId, fileName), bytes)
+  const { error } = await supabase().storage
+    .from(PHOTOS_BUCKET)
+    .upload(photoKey(applicantId, fileName), Buffer.from(bytes), { contentType: mime, upsert: true })
+  if (error) throw new Error(`photo upload failed: ${error.message}`)
 
-  applicant.photo = { fileName, mime, uploadedAt: new Date().toISOString() }
-  applicant.updatedAt = new Date().toISOString()
-  await save(all)
-  return applicant
+  return patch(applicantId, a => { a.photo = { fileName, mime, uploadedAt: new Date().toISOString() } })
 }
 
 /** Save the onboarding tracker (stage axis) onto an applicant. */
 export async function saveOnboarding(applicantId: string, onboarding: OnboardingTracker): Promise<Applicant | null> {
-  const all = await load()
-  const applicant = all.find(a => a.id === applicantId)
-  if (!applicant) return null
-  applicant.onboarding = onboarding
-  applicant.updatedAt = new Date().toISOString()
-  await save(all)
-  return applicant
+  return patch(applicantId, a => { a.onboarding = onboarding })
 }
 
 /** Save the candidate profile (ID-derived identity) onto an applicant. */
 export async function saveProfile(applicantId: string, profile: CandidateProfile): Promise<Applicant | null> {
-  const all = await load()
-  const applicant = all.find(a => a.id === applicantId)
-  if (!applicant) return null
-  applicant.profile = profile
-  applicant.updatedAt = new Date().toISOString()
-  await save(all)
-  return applicant
+  return patch(applicantId, a => { a.profile = profile })
 }
 
 /** Save the human-only questionnaire answers onto an applicant. */
 export async function saveAnswers(applicantId: string, answers: PacketAnswers): Promise<Applicant | null> {
-  const all = await load()
-  const applicant = all.find(a => a.id === applicantId)
-  if (!applicant) return null
-  applicant.answers = answers
-  applicant.updatedAt = new Date().toISOString()
-  await save(all)
-  return applicant
+  return patch(applicantId, a => { a.answers = answers })
 }
 
 /**
- * Persist a scan result onto an applicant's form, write the uploaded PDF bytes
- * to disk so it can be viewed/bundled later, and recompute packet status.
+ * Persist a scan result onto an applicant's form, upload the PDF bytes to
+ * Storage so it can be viewed/bundled later, and recompute packet status.
  */
 export async function applyScan(
   applicantId: string, specId: string, fileName: string, bytes: Uint8Array, result: AnalysisResult,
 ): Promise<Applicant | null> {
-  const all = await load()
-  const applicant = all.find(a => a.id === applicantId)
+  const applicant = await getApplicant(applicantId)
   if (!applicant) return null
 
-  await fs.mkdir(UPLOADS_DIR, { recursive: true })
-  await fs.writeFile(formPath(applicantId, specId), bytes)
+  const { error } = await supabase().storage
+    .from(FORMS_BUCKET)
+    .upload(formKey(applicantId, specId), Buffer.from(bytes), { contentType: 'application/pdf', upsert: true })
+  if (error) throw new Error(`form upload failed: ${error.message}`)
 
-  const idx = applicant.forms.findIndex(f => f.specId === specId)
-  const formState: FormState = {
-    specId,
-    uploaded: true,
-    fileName,
-    mime: 'application/pdf',
-    stored: true,
-    completeness: result.completeness,
-    missing: result.missing,
-    issues: result.issues,
-    analyzedAt: new Date().toISOString(),
-  }
-  if (idx >= 0) applicant.forms[idx] = formState
-  else applicant.forms.push(formState)
+  return patch(applicantId, a => {
+    const idx = a.forms.findIndex(f => f.specId === specId)
+    const formState: FormState = {
+      specId,
+      uploaded: true,
+      fileName,
+      mime: 'application/pdf',
+      stored: true,
+      completeness: result.completeness,
+      missing: result.missing,
+      issues: result.issues,
+      analyzedAt: new Date().toISOString(),
+    }
+    if (idx >= 0) a.forms[idx] = formState
+    else a.forms.push(formState)
+    a.status = derivePacketStatus(a)
+  })
+}
 
-  applicant.status = derivePacketStatus(applicant)
-  applicant.updatedAt = new Date().toISOString()
-  await save(all)
-  return applicant
+/** Download a stored form PDF's bytes from Storage, or null if absent. */
+export async function getFormBytes(applicantId: string, specId: string): Promise<Uint8Array | null> {
+  const { data, error } = await supabase().storage.from(FORMS_BUCKET).download(formKey(applicantId, specId))
+  if (error || !data) return null
+  return new Uint8Array(await data.arrayBuffer())
+}
+
+/** Download a stored profile photo's bytes from Storage, or null if absent. */
+export async function getPhotoBytes(applicantId: string, fileName: string): Promise<Uint8Array | null> {
+  const { data, error } = await supabase().storage.from(PHOTOS_BUCKET).download(photoKey(applicantId, fileName))
+  if (error || !data) return null
+  return new Uint8Array(await data.arrayBuffer())
 }
 
 function derivePacketStatus(a: Applicant): PacketStatus {

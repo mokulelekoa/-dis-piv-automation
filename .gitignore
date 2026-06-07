@@ -45,7 +45,7 @@ dev.log
 *.tsbuildinfo
 next-env.d.ts
 
-# Local/secret — never commit
+# local/secret — never commit
 artifacts/recent-iue-email/
 PHASE_BUILD_PLAN.md
 .claude/settings.local.json
