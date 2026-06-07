@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server'
 import { analyzePdf } from '@/lib/forms/analyze'
 import { getSpec } from '@/lib/forms/specs'
 import { applyScan, getApplicant } from '@/lib/store'
+import { canAccessApplicant } from '@/lib/auth'
 
 /**
  * POST /api/applicants/[id]/scan
@@ -16,6 +17,9 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+    if (!(await canAccessApplicant(id))) {
+      return Response.json({ error: 'Not authorized.' }, { status: 403 })
+    }
     const applicant = await getApplicant(id)
     if (!applicant) {
       return Response.json({ error: 'Applicant not found' }, { status: 404 })

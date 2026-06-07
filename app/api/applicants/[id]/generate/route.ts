@@ -4,6 +4,7 @@ import { lastFour, emptyProfile } from '@/lib/profile'
 import { emptyAnswers } from '@/lib/forms/questions'
 import { requiredFormsForRole, getSpec } from '@/lib/forms/specs'
 import { fillForm } from '@/lib/forms/fill'
+import { canAccessApplicant } from '@/lib/auth'
 
 /**
  * GET /api/applicants/[id]/generate?specId=of306
@@ -21,6 +22,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
+  if (!(await canAccessApplicant(id))) {
+    return Response.json({ error: 'Not authorized.' }, { status: 403 })
+  }
   const applicant = await getApplicant(id)
   if (!applicant) return Response.json({ error: 'Applicant not found' }, { status: 404 })
 

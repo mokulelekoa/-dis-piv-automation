@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getApplicant, savePhoto, getPhotoBytes } from '@/lib/store'
+import { canAccessApplicant } from '@/lib/auth'
 
 const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
 const ALLOWED = ['image/jpeg', 'image/png', 'image/webp']
@@ -16,6 +17,9 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+    if (!(await canAccessApplicant(id))) {
+      return Response.json({ error: 'Not authorized.' }, { status: 403 })
+    }
     const applicant = await getApplicant(id)
     if (!applicant) return Response.json({ error: 'Applicant not found' }, { status: 404 })
 
@@ -48,6 +52,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
+  if (!(await canAccessApplicant(id))) {
+    return new Response(null, { status: 403 })
+  }
   const applicant = await getApplicant(id)
   if (!applicant?.photo) return new Response(null, { status: 404 })
 

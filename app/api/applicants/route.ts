@@ -1,13 +1,20 @@
 import { NextRequest } from 'next/server'
 import { listApplicants, createApplicant } from '@/lib/store'
 import { ROLE_LABELS, type PacketRole } from '@/lib/forms/specs'
+import { isAdminRequest } from '@/lib/auth'
 
 export async function GET() {
+  if (!(await isAdminRequest())) {
+    return Response.json({ error: 'Not authorized.' }, { status: 403 })
+  }
   const applicants = await listApplicants()
   return Response.json({ applicants })
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isAdminRequest())) {
+    return Response.json({ error: 'Not authorized.' }, { status: 403 })
+  }
   try {
     const body = await request.json()
     const { firstName, lastName, email, role, station } = body ?? {}

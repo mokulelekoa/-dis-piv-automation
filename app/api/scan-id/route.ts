@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { extractIdData } from '@/lib/ai/id-parser'
+import { getAuthUser } from '@/lib/auth'
 
 /**
  * POST /api/scan-id
@@ -9,6 +10,9 @@ import { extractIdData } from '@/lib/ai/id-parser'
  * persist anything — the candidate reviews/corrects on the client, then saves.
  */
 export async function POST(request: NextRequest) {
+  if (!(await getAuthUser())) {
+    return Response.json({ error: 'Not authorized.' }, { status: 401 })
+  }
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null

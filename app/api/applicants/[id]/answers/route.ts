@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { saveAnswers } from '@/lib/store'
 import { validateAnswers, type PacketAnswers } from '@/lib/forms/questions'
+import { canAccessApplicant } from '@/lib/auth'
 
 export async function PUT(
   request: NextRequest,
@@ -8,6 +9,9 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
+    if (!(await canAccessApplicant(id))) {
+      return Response.json({ error: 'Not authorized.' }, { status: 403 })
+    }
     const answers = (await request.json()) as PacketAnswers
     const applicant = await saveAnswers(id, answers)
     if (!applicant) return Response.json({ error: 'Applicant not found' }, { status: 404 })

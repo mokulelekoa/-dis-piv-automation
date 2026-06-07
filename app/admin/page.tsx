@@ -4,6 +4,8 @@ import { ROLE_LABELS } from '@/lib/forms/specs'
 import { STATUS_LABELS, STATUS_PILL, formHealth, HEALTH_DOT } from '@/app/components/status'
 import Avatar from '@/app/components/Avatar'
 import BrandHeader from '@/app/components/BrandHeader'
+import InvitePanel from '@/app/components/InvitePanel'
+import { requireAdmin } from '@/lib/auth'
 import {
   type Queue, QUEUE_LABELS, QUEUE_ORDER, BLOCKER_LABELS, STAGE_LABELS,
   emptyTracker, normalizePosition, queuesFor, currentStage, ageAtCurrentStage,
@@ -17,6 +19,7 @@ function trackerOf(a: Applicant) {
 }
 
 export default async function AdminDashboard() {
+  await requireAdmin()
   const applicants = await listApplicants()
 
   // Operational queue counts (a candidate can appear in several).
@@ -27,7 +30,11 @@ export default async function AdminDashboard() {
   return (
     <main className="min-h-screen bg-blue-50">
       <BrandHeader subtitle="Onboarding Command Center" href="/admin"
-        right={<Link href="/admin/login" className="font-semibold text-white/80 hover:text-white">Sign out</Link>} />
+        right={
+          <form action="/auth/signout" method="post">
+            <button type="submit" className="font-semibold text-white/80 hover:text-white">Sign out</button>
+          </form>
+        } />
       <div className="mx-auto max-w-6xl px-4 py-10">
         <header className="mb-6">
           <h1 className="text-2xl font-black text-slate-900">CMOP Onboarding Command Center</h1>
@@ -36,6 +43,11 @@ export default async function AdminDashboard() {
             Work the queues top to bottom &mdash; blocked and no-show candidates first.
           </p>
         </header>
+
+        {/* Invite candidates and teammates — the only way new accounts are created. */}
+        <div className="mb-6">
+          <InvitePanel roles={Object.entries(ROLE_LABELS)} />
+        </div>
 
         {/* Operational queues */}
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { PDFDocument } from 'pdf-lib'
 import { getApplicant, getFormBytes, packetDownloadable, specLabel } from '@/lib/store'
+import { canAccessApplicant } from '@/lib/auth'
 
 /**
  * GET /api/applicants/[id]/package — merges every stored form PDF into one
@@ -12,6 +13,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
+  if (!(await canAccessApplicant(id))) {
+    return new Response(null, { status: 403 })
+  }
   const applicant = await getApplicant(id)
   if (!applicant) return new Response(null, { status: 404 })
   if (!packetDownloadable(applicant)) {

@@ -9,11 +9,13 @@ import PacketForms from '@/app/components/PacketForms'
 import OnboardingTimeline from '@/app/components/OnboardingTimeline'
 import Avatar from '@/app/components/Avatar'
 import BrandHeader from '@/app/components/BrandHeader'
+import { requireAdmin } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export default async function ApplicantDetail({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin()
   const { id } = await params
   const applicant = await getApplicant(id)
   if (!applicant) notFound()

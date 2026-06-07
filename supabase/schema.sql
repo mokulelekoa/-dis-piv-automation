@@ -22,3 +22,20 @@ on conflict (id) do nothing;
 insert into storage.buckets (id, name, public)
 values ('photos', 'photos', false)
 on conflict (id) do nothing;
+
+-- Invite codes that gate signup. An admin generates one from the dashboard; the
+-- candidate (or invited teammate) redeems it at /signup along with the email it
+-- was issued to. Single-use (used_at) and expiring (expires_at). Accessed only by
+-- the service-role server, so RLS stays disabled like the applicants table.
+create table if not exists public.invites (
+  code         text primary key,
+  email        text not null,
+  role         text not null default 'candidate',   -- 'candidate' | 'admin'
+  applicant_id uuid references public.applicants(id) on delete cascade,  -- null for admin invites
+  invited_by   text,                                  -- email of the admin who issued it
+  used_at      timestamptz,
+  expires_at   timestamptz not null,
+  created_at   timestamptz not null default now()
+);
+
+create index if not exists invites_email_idx on public.invites (lower(email));

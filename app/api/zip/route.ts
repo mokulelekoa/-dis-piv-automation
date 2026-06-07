@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { getAuthUser } from '@/lib/auth'
 
 /**
  * US ZIP → city/state lookup. Backs the place-of-birth smart autofill in the
@@ -22,6 +23,9 @@ export interface ZipLookupResult extends ZipPlace {
 }
 
 export async function GET(request: NextRequest) {
+  if (!(await getAuthUser())) {
+    return Response.json({ error: 'Not authorized.' }, { status: 401 })
+  }
   const zip = (request.nextUrl.searchParams.get('zip') ?? '').trim()
   if (!/^\d{5}$/.test(zip)) {
     return Response.json({ error: 'Enter a 5-digit US ZIP code.' }, { status: 400 })

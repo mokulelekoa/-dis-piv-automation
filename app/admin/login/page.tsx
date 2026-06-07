@@ -1,18 +1,30 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Lock, Mail, Loader2 } from 'lucide-react'
 import AuthShell from '@/app/components/AuthShell'
+import { createBrowserSupabase } from '@/lib/supabase/browser'
 
 export default function AdminLogin() {
+  return (
+    <Suspense fallback={null}>
+      <AdminLoginForm />
+    </Suspense>
+  )
+}
+
+function AdminLoginForm() {
   const router = useRouter()
+  const params = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    params.get('error') === 'link' ? 'That link was invalid or expired. Please sign in.' : null,
+  )
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
     if (!email.trim() || !password) {
@@ -20,8 +32,33 @@ export default function AdminLogin() {
       return
     }
     setSubmitting(true)
-    // Prototype: no auth backend yet — accept any credentials and enter the console.
-    router.push('/admin')
+    try {
+      const supabase = createBrowserSupabase()
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      })
+      if (signInError) {
+        setError(
+          /confirm/i.test(signInError.message)
+            ? 'Please confirm your email first — check your inbox for the confirmation link.'
+            : 'That email and password didn’t match. Try again.',
+        )
+        return
+      }
+      if (data.user?.app_metadata?.role !== 'admin') {
+        // Authenticated, but not a coordinator — don't let them into the console.
+        await supabase.auth.signOut()
+        setError('This account doesn’t have console access. Use the candidate portal instead.')
+        return
+      }
+      router.push('/admin')
+      router.refresh()
+    } catch {
+      setError('Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -30,9 +67,7 @@ export default function AdminLogin() {
       blurb="Coordinator access to every candidate's VA onboarding stage, blockers, and packet readiness — in one place."
     >
       <h2 className="text-xl font-black text-dis-navy">Coordinator sign in</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Demo preview &mdash; sign-in isn&rsquo;t enforced yet. Any entry opens the console.
-      </p>
+      <p className="mt-1 text-sm text-slate-500">Sign in with your coordinator account.</p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <Labeled label="Work email" icon={<Mail size={15} className="text-slate-400" />}>
@@ -67,6 +102,12 @@ export default function AdminLogin() {
           Sign in
         </button>
       </form>
+
+      <div className="mt-4 text-center">
+        <a href="/forgot-password" className="text-xs font-semibold text-slate-500 hover:text-dis-teal hover:underline">
+          Forgot your password?
+        </a>
+      </div>
 
       <p className="mt-6 text-center text-xs text-slate-400">
         Candidate?{' '}

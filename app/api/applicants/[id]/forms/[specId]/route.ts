@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getApplicant, getFormBytes } from '@/lib/store'
+import { canAccessApplicant } from '@/lib/auth'
 
 /**
  * GET /api/applicants/[id]/forms/[specId] — streams the stored, uploaded form
@@ -11,6 +12,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string; specId: string }> },
 ) {
   const { id, specId } = await params
+  if (!(await canAccessApplicant(id))) {
+    return new Response(null, { status: 403 })
+  }
   const applicant = await getApplicant(id)
   const form = applicant?.forms.find(f => f.specId === specId)
   if (!form?.stored) return new Response(null, { status: 404 })

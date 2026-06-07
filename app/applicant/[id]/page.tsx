@@ -5,12 +5,14 @@ import { getApplicant, packetCompleteness, totalMissingCount } from '@/lib/store
 import { ROLE_LABELS } from '@/lib/forms/specs'
 import PacketForms from '@/app/components/PacketForms'
 import BrandHeader from '@/app/components/BrandHeader'
+import { requireApplicantAccess } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export default async function ApplicantSelfReview({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  await requireApplicantAccess(id)
   const applicant = await getApplicant(id)
   if (!applicant) notFound()
 
