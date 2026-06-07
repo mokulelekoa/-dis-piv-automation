@@ -37,7 +37,7 @@ export default function ApplicantLogin() {
   return (
     <AuthShell
       heading="Your CMOP onboarding, simplified"
-      blurb="Upload your ID once and we fill every VA form we can. You only answer what a document can't prove — then print, sign, and upload."
+      blurb="Upload your ID and answer a few guided questions — we complete every VA form for you. Then just review, print, sign, and upload."
     >
       <h2 className="text-xl font-black text-dis-navy">Candidate sign in</h2>
       <p className="mt-1 text-sm text-slate-500">

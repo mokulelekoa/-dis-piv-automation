@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getApplicant } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
-import Questionnaire from '@/app/components/Questionnaire'
+import PacketWizard from '@/app/components/PacketWizard'
 import BrandHeader from '@/app/components/BrandHeader'
 
 export const dynamic = 'force-dynamic'
@@ -24,17 +24,18 @@ export default async function QuestionnairePage({ params }: { params: Promise<{ 
         <header className="mb-8">
           <h1 className="text-2xl font-black text-slate-900">Complete your {ROLE_LABELS[applicant.role]} forms</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {applicant.firstName}, answer the questions below — these are the declarations no document can prove,
-            so only you can fill them in. When you&rsquo;re done, download each pre-filled VA form, print it,
-            sign in black ink, and upload the scan back.
+            {applicant.firstName}, we&rsquo;ll guide you through your VA packet one section at a time. At the end
+            we generate each real VA form, filled in from your answers, for you to review, print, sign in black
+            ink, and upload back.
           </p>
         </header>
 
-        <Questionnaire
+        <PacketWizard
           applicantId={id}
           role={applicant.role}
           initialProfile={applicant.profile ?? null}
           initialAnswers={applicant.answers ?? null}
+          initialForms={applicant.forms}
           firstName={applicant.firstName}
           lastName={applicant.lastName}
           hasPhoto={!!applicant.photo}

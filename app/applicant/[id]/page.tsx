@@ -49,9 +49,9 @@ export default async function ApplicantSelfReview({ params }: { params: Promise<
           className="mb-6 flex items-center gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 transition hover:border-accent-300 hover:bg-accent-100">
           <PenLine size={22} className="flex-shrink-0 text-accent-600" />
           <div className="flex-1">
-            <div className="text-sm font-bold text-dis-navy">Fill out your forms here</div>
+            <div className="text-sm font-bold text-dis-navy">Complete your forms step by step</div>
             <div className="mt-0.5 text-xs text-accent-700">
-              Answer a few questions and we&rsquo;ll generate your pre-filled VA forms to print, sign, and upload.
+              A guided walkthrough fills every VA form for you — then review, print, sign, and upload.
             </div>
           </div>
           <ArrowRight size={18} className="flex-shrink-0 text-accent-600" />

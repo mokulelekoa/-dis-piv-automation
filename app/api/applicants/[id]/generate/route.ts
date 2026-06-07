@@ -9,9 +9,12 @@ import { fillForm } from '@/lib/forms/fill'
  * GET /api/applicants/[id]/generate?specId=of306
  *
  * Fills the ORIGINAL VA template for one required form from the applicant's
- * stored profile + answers and returns it as a downloadable PDF. Signature and
+ * stored profile + answers and returns it as a PDF. Signature and
  * signature-date fields are intentionally left blank — the applicant prints,
  * wet-signs in black ink, dates, and uploads the scan back.
+ *
+ * Defaults to an attachment download; pass ?disposition=inline to render it in
+ * an embedded viewer (used by the review step of the packet wizard).
  */
 export async function GET(
   request: NextRequest,
@@ -42,11 +45,13 @@ export async function GET(
   const lastName = (profile.lastName || applicant.lastName || 'Candidate').replace(/[^A-Za-z]/g, '')
   const fileName = `${applicant.station}_${lastName}${last4}_${suffix[specId] ?? specId}.pdf`
 
+  const inline = request.nextUrl.searchParams.get('disposition') === 'inline'
+
   return new Response(new Blob([bytes as BlobPart], { type: 'application/pdf' }), {
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${fileName}"`,
       'Cache-Control': 'no-store',
       'X-Form-Label': (getSpec(specId)?.label ?? specId).replace(/[^\x20-\x7E]/g, '-'),
     },
