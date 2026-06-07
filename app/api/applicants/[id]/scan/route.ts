@@ -36,7 +36,7 @@ export async function POST(
 
     const bytes = new Uint8Array(await file.arrayBuffer())
     const result = await analyzePdf(specId, bytes)
-    const updated = await applyScan(id, specId, file.name, result)
+    const updated = await applyScan(id, specId, file.name, bytes, result)
 
     return Response.json({ applicant: updated, analysis: result })
   } catch (err) {

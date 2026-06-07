@@ -30,6 +30,9 @@ export interface FormState {
   specId: string
   uploaded: boolean
   fileName?: string
+  mime?: string
+  /** True once the actual uploaded bytes are persisted to disk (seed rows aren't). */
+  stored?: boolean
   completeness: number          // 0-100
   missing: string[]
   issues: string[]
@@ -67,6 +70,14 @@ const UPLOADS_DIR = path.join(DATA_DIR, 'uploads')
 /** Absolute path where an applicant's profile photo is stored on disk. */
 export function photoPath(applicantId: string, fileName: string): string {
   return path.join(UPLOADS_DIR, `${applicantId}-${fileName}`)
+}
+
+/**
+ * Absolute path where an applicant's uploaded form PDF is stored. Keyed by
+ * specId (not the original file name) so a re-upload overwrites cleanly.
+ */
+export function formPath(applicantId: string, specId: string): string {
+  return path.join(UPLOADS_DIR, `${applicantId}-form-${specId}.pdf`)
 }
 
 function emptyForms(role: PacketRole): FormState[] {
@@ -380,19 +391,27 @@ export async function saveAnswers(applicantId: string, answers: PacketAnswers): 
   return applicant
 }
 
-/** Persist a scan result onto an applicant's form and recompute packet status. */
+/**
+ * Persist a scan result onto an applicant's form, write the uploaded PDF bytes
+ * to disk so it can be viewed/bundled later, and recompute packet status.
+ */
 export async function applyScan(
-  applicantId: string, specId: string, fileName: string, result: AnalysisResult,
+  applicantId: string, specId: string, fileName: string, bytes: Uint8Array, result: AnalysisResult,
 ): Promise<Applicant | null> {
   const all = await load()
   const applicant = all.find(a => a.id === applicantId)
   if (!applicant) return null
+
+  await fs.mkdir(UPLOADS_DIR, { recursive: true })
+  await fs.writeFile(formPath(applicantId, specId), bytes)
 
   const idx = applicant.forms.findIndex(f => f.specId === specId)
   const formState: FormState = {
     specId,
     uploaded: true,
     fileName,
+    mime: 'application/pdf',
+    stored: true,
     completeness: result.completeness,
     missing: result.missing,
     issues: result.issues,
@@ -425,6 +444,15 @@ export function packetCompleteness(a: Applicant): number {
 
 export function totalMissingCount(a: Applicant): number {
   return a.forms.reduce((n, f) => n + f.missing.length + f.issues.length + (f.uploaded ? 0 : 1), 0)
+}
+
+/**
+ * True when every required form is uploaded, 100% complete, issue-free, and has
+ * its bytes on disk — i.e. the admin can download a merged review package.
+ */
+export function packetDownloadable(a: Applicant): boolean {
+  return a.forms.length > 0
+    && a.forms.every(f => f.uploaded && f.stored && f.completeness === 100 && f.issues.length === 0)
 }
 
 export function specLabel(specId: string): string {

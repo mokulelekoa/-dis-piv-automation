@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Mail, Hash } from 'lucide-react'
-import { getApplicant, packetCompleteness, totalMissingCount } from '@/lib/store'
+import { ArrowLeft, Mail, Hash, Download, PackageCheck } from 'lucide-react'
+import { getApplicant, packetCompleteness, totalMissingCount, packetDownloadable } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
 import { emptyTracker, normalizePosition } from '@/lib/onboarding'
 import { STATUS_LABELS, STATUS_PILL } from '@/app/components/status'
@@ -21,6 +21,7 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
   const pct = packetCompleteness(applicant)
   const open = totalMissingCount(applicant)
   const tracker = applicant.onboarding ?? emptyTracker(normalizePosition(ROLE_LABELS[applicant.role]))
+  const packetReady = packetDownloadable(applicant)
 
   return (
     <main className="min-h-screen bg-blue-50">
@@ -63,6 +64,24 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
         <div className="mb-6">
           <OnboardingTimeline tracker={tracker} />
         </div>
+
+        {packetReady && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-green-200 bg-green-50 p-5">
+            <div className="flex items-start gap-3">
+              <PackageCheck size={22} className="mt-0.5 flex-shrink-0 text-green-600" />
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Application package ready</h2>
+                <p className="mt-0.5 text-xs text-slate-600">All required forms are uploaded and complete. Download the merged packet for review.</p>
+              </div>
+            </div>
+            <a
+              href={`/api/applicants/${applicant.id}/package`}
+              className="inline-flex items-center gap-2 rounded-lg bg-accent-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-600"
+            >
+              <Download size={16} /> Download package
+            </a>
+          </div>
+        )}
 
         <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-slate-400">Required forms</h2>
         <PacketForms applicant={applicant} />
