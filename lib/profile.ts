@@ -46,3 +46,9 @@ export function lastFour(ssn: string): string {
   const digits = ssn.replace(/\D/g, '')
   return digits.length >= 4 ? digits.slice(-4) : ''
 }
+
+/** True when a free-text country reads as the United States. Only U.S.-born candidates have a state of birth. */
+export function isUSCountry(input: string): boolean {
+  const v = input.trim().toLowerCase()
+  return ['us', 'usa', 'u.s.', 'u.s.a.', 'united states', 'united states of america', 'america'].includes(v)
+}

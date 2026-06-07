@@ -6,12 +6,13 @@ import {
   Loader2, CheckCircle2, AlertTriangle, ArrowLeft, ArrowRight, Download,
   PenLine, FileText, ShieldCheck,
 } from 'lucide-react'
-import { type CandidateProfile, emptyProfile } from '@/lib/profile'
+import { type CandidateProfile, emptyProfile, isUSCountry } from '@/lib/profile'
 import {
   type PacketAnswers, emptyAnswers, MARITAL_OPTIONS,
   BREAK_IN_SERVICE_OPTIONS, needsBackgroundExplanation,
 } from '@/lib/forms/questions'
 import { requiredFormsForRole, getSpec, ROLE_LABELS, type PacketRole } from '@/lib/forms/specs'
+import { US_STATE_OPTIONS } from '@/lib/geo'
 import type { FormState } from '@/lib/store'
 import PhotoUpload from './PhotoUpload'
 import FormUpload from './FormUpload'
@@ -98,11 +99,15 @@ export default function PacketWizard({
         const req: [keyof CandidateProfile, string][] = [
           ['firstName', 'First name'], ['lastName', 'Last name'],
           ['dateOfBirth', 'Date of birth'], ['sex', 'Sex'], ['ssn', 'Social Security Number'],
-          ['placeOfBirthCity', 'City of birth'], ['placeOfBirthState', 'State of birth'],
+          ['placeOfBirthCity', 'City of birth'],
           ['placeOfBirthCountry', 'Country of birth'], ['citizenshipCountry', 'Country of citizenship'],
           ['email', 'Email'],
         ]
         for (const [k, label] of req) if (!String(profile[k] ?? '').trim()) out.push(`${label} is required.`)
+        // State of birth only applies to U.S.-born candidates (matches form spec).
+        if (isUSCountry(profile.placeOfBirthCountry) && !profile.placeOfBirthState.trim()) {
+          out.push('State of birth is required for U.S.-born candidates.')
+        }
         if (!profile.middleName.trim() && !profile.hasNoMiddleName) {
           out.push('Enter a middle name or check "No middle name".')
         }
@@ -122,11 +127,7 @@ export default function PacketWizard({
             <Text label="Date of birth" type="date" value={profile.dateOfBirth} onChange={v => p('dateOfBirth', v)} />
             <Text label="Sex" value={profile.sex} onChange={v => p('sex', v)} placeholder="M / F" />
             <Text label="Social Security Number" value={profile.ssn} onChange={v => p('ssn', v)} className="sm:col-span-2" />
-            <Text label="City of birth" value={profile.placeOfBirthCity} onChange={v => p('placeOfBirthCity', v)} />
-            <div className="grid grid-cols-2 gap-4">
-              <Text label="State of birth" value={profile.placeOfBirthState} onChange={v => p('placeOfBirthState', v)} placeholder="HI" />
-              <Text label="Country of birth" value={profile.placeOfBirthCountry} onChange={v => p('placeOfBirthCountry', v)} placeholder="USA" />
-            </div>
+            <PlaceOfBirthFields profile={profile} set={p} />
             <Text label="Country of citizenship" value={profile.citizenshipCountry} onChange={v => p('citizenshipCountry', v)} />
             <Text label="Email" type="email" value={profile.email} onChange={v => p('email', v)} />
           </Grid>
@@ -456,6 +457,71 @@ function ReviewStep({ applicantId, requiredForms, initialForms }: {
           Once every form is uploaded and shows 100%, your packet is ready for coordinator review.
           You can return to this page anytime to re-download or re-upload.
         </span>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- place of birth (smart ZIP autofill) ---------- */
+
+/**
+ * City/State/Country of birth with a US ZIP shortcut: typing a 5-digit ZIP fills
+ * City of birth and selects the State of birth dropdown (2-letter code, matching
+ * the VA AcroForm). State of birth is shown only for U.S. births — foreign-born
+ * candidates have no state, so it's hidden and cleared (mirrors the form spec).
+ */
+function PlaceOfBirthFields({ profile, set }: {
+  profile: CandidateProfile
+  set: <K extends keyof CandidateProfile>(k: K, v: CandidateProfile[K]) => void
+}) {
+  const [zip, setZip] = useState('')
+  const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
+  const [msg, setMsg] = useState('')
+
+  async function onZip(raw: string) {
+    const z = raw.replace(/\D/g, '').slice(0, 5)
+    setZip(z)
+    if (z.length < 5) { setStatus('idle'); setMsg(''); return }
+    setStatus('loading'); setMsg('Looking up ZIP…')
+    try {
+      const res = await fetch(`/api/zip?zip=${z}`)
+      const data = await res.json()
+      if (!res.ok) { setStatus('error'); setMsg(data.error ?? 'No US city found for that ZIP.'); return }
+      set('placeOfBirthCity', data.city)
+      set('placeOfBirthState', data.state)
+      set('placeOfBirthCountry', 'United States of America')
+      setStatus('ok'); setMsg(`Filled ${data.city}, ${data.state}`)
+    } catch {
+      setStatus('error'); setMsg('ZIP lookup unavailable — enter city and state below.')
+    }
+  }
+
+  const country = profile.placeOfBirthCountry
+  const showState = country.trim() === '' || isUSCountry(country)
+
+  return (
+    <div className="space-y-4 sm:col-span-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div>
+          <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">
+            Birth ZIP (US) — optional
+          </label>
+          <input inputMode="numeric" maxLength={5} value={zip} placeholder="e.g. 96813"
+            onChange={e => onZip(e.target.value)}
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30" />
+          <p className={`mt-1 text-[11px] ${status === 'error' ? 'text-amber-600' : status === 'ok' ? 'text-emerald-600' : 'text-slate-500'}`}>
+            {msg || 'Type a US ZIP to auto-fill city and state.'}
+          </p>
+        </div>
+        <Text label="City of birth" value={profile.placeOfBirthCity} onChange={v => set('placeOfBirthCity', v)} />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Text label="Country of birth" value={country} placeholder="USA"
+          onChange={v => { set('placeOfBirthCountry', v); if (v.trim() && !isUSCountry(v)) set('placeOfBirthState', '') }} />
+        {showState && (
+          <SelectField label="State of birth" value={profile.placeOfBirthState}
+            options={US_STATE_OPTIONS} onChange={v => set('placeOfBirthState', v)} placeholder="Select state…" />
+        )}
       </div>
     </div>
   )

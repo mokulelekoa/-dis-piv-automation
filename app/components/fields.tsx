@@ -57,16 +57,19 @@ export function Check({ label, checked, onChange }: { label: string; checked: bo
   )
 }
 
-export function SelectField({ label, value, options, onChange }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void
+export function SelectField({ label, value, options, onChange, placeholder = 'Select…' }: {
+  label: string; value: string
+  options: (string | { value: string; label: string })[]
+  onChange: (v: string) => void; placeholder?: string
 }) {
+  const opts = options.map(o => (typeof o === 'string' ? { value: o, label: o } : o))
   return (
     <div>
       <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
         className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30">
-        <option value="">Select…</option>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        <option value="">{placeholder}</option>
+        {opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
   )

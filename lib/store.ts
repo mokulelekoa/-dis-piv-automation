@@ -61,6 +61,10 @@ export interface Applicant {
 
 const TABLE = 'applicants'
 
+// Applicant IDs are UUIDs. Guard before querying so a malformed path segment
+// returns a clean 404 instead of a Postgres "invalid input syntax for uuid" 500.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /** Storage object key for an applicant's uploaded form PDF (specId-keyed so a re-upload overwrites). */
 function formKey(applicantId: string, specId: string): string {
   return `${applicantId}/${specId}.pdf`
@@ -336,6 +340,7 @@ export async function listApplicants(): Promise<Applicant[]> {
 }
 
 export async function getApplicant(id: string): Promise<Applicant | null> {
+  if (!UUID_RE.test(id)) return null
   await ensureSeeded()
   const { data, error } = await supabase().from(TABLE).select('data').eq('id', id).maybeSingle()
   if (error) throw new Error(`store get failed: ${error.message}`)

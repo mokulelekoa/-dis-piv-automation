@@ -20,8 +20,15 @@ export interface OneOfGroup {
 export interface RequiredText {
   field: string
   label: string
-  /** Only required when `when` evaluates true given currently-checked fields. */
-  conditionalOn?: { anyChecked: string[] }
+  /**
+   * Only required when the condition holds. Every sub-condition provided must be
+   * true: `anyChecked` = at least one of these checkbox/radio fields is checked;
+   * `dropdownEquals` = the named dropdown's selection equals `value`.
+   */
+  conditionalOn?: {
+    anyChecked?: string[]
+    dropdownEquals?: { field: string; value: string }
+  }
 }
 
 export interface FormSpec {
@@ -46,10 +53,16 @@ const BI_FIELDS_BASE = (id: string, label: string, templateFile: string): FormSp
     { field: 'Last Name', label: 'Last name' },
     { field: 'First Name', label: 'First name' },
     { field: 'Middle Name', label: 'Middle name (use "NMN" if none)' },
-    { field: 'Social Security Number', label: 'Social Security Number' },
+    // The VA template's visible SSN box is the misspelled field; the correctly
+    // spelled field is an orphan that never renders/fills, so we check this one.
+    { field: 'Social Secuirty Number', label: 'Social Security Number' },
     { field: 'Date of Birth', label: 'Date of birth' },
     { field: 'City of Birth', label: 'City of birth' },
-    { field: 'State of Birth', label: 'State of birth' },
+    {
+      field: 'State of Birth', label: 'State of birth',
+      // Only U.S.-born candidates have a state of birth.
+      conditionalOn: { dropdownEquals: { field: 'Country of Birth', value: 'United States of America' } },
+    },
     { field: 'Country of Birth', label: 'Country of birth' },
     { field: 'Country of Citizenship', label: 'Country of citizenship' },
     { field: 'Email Address', label: 'Email address' },

@@ -88,6 +88,21 @@ function anyChecked(map: Map<string, FieldValue>, fields: string[]): boolean {
   return checkedCount(map, fields) > 0
 }
 
+/** Evaluate a RequiredText.conditionalOn rule against the form's actual values. */
+function conditionMet(
+  map: Map<string, FieldValue>,
+  cond: { anyChecked?: string[]; dropdownEquals?: { field: string; value: string } },
+): boolean {
+  if (cond.anyChecked && !anyChecked(map, cond.anyChecked)) return false
+  if (cond.dropdownEquals) {
+    const v = map.get(cond.dropdownEquals.field)
+    const want = cond.dropdownEquals.value.trim().toLowerCase()
+    const ok = v?.type === 'dropdown' && v.selected.some(s => s.trim().toLowerCase() === want)
+    if (!ok) return false
+  }
+  return true
+}
+
 export async function analyzePdf(specId: string, pdfBytes: Uint8Array): Promise<AnalysisResult> {
   const spec = getSpec(specId)
   if (!spec) throw new Error(`Unknown form spec: ${specId}`)
@@ -128,7 +143,7 @@ export async function analyzePdf(specId: string, pdfBytes: Uint8Array): Promise<
 
   // Required text (respecting conditionals)
   for (const rt of spec.requiredText) {
-    const conditionallyRequired = rt.conditionalOn ? anyChecked(map, rt.conditionalOn.anyChecked) : true
+    const conditionallyRequired = rt.conditionalOn ? conditionMet(map, rt.conditionalOn) : true
     if (!conditionallyRequired) continue
     requiredTotal++
     const filled = isFilled(map.get(rt.field))
