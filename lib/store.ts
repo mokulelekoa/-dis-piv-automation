@@ -57,7 +57,10 @@ export interface Applicant {
   updatedAt: string
 }
 
-const DATA_DIR = path.join(process.cwd(), '.data')
+// On Vercel the project directory is read-only; only /tmp is writable. This
+// file store is the prototype's staging layer, so on serverless we fall back to
+// an ephemeral /tmp dir (re-seeded on cold start). A real DB replaces this later.
+const DATA_DIR = process.env.VERCEL ? '/tmp/dis-cmop-data' : path.join(process.cwd(), '.data')
 const DATA_FILE = path.join(DATA_DIR, 'applicants.json')
 const UPLOADS_DIR = path.join(DATA_DIR, 'uploads')
 
