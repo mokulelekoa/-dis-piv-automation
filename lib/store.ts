@@ -7,7 +7,7 @@
  */
 
 import { randomUUID } from 'crypto'
-import { supabase, FORMS_BUCKET, PHOTOS_BUCKET } from './supabase'
+import { supabase, FORMS_BUCKET, PHOTOS_BUCKET, ATTACHMENTS_BUCKET } from './supabase'
 import { type PacketRole, requiredFormsForRole, getSpec } from './forms/specs'
 import type { AnalysisResult } from './forms/analyze'
 import type { CandidateProfile } from './profile'
@@ -39,6 +39,22 @@ export interface FormState {
   analyzedAt?: string
 }
 
+/**
+ * A general document attached to a candidate outside the required form set
+ * (e.g. a scanned ID, offer letter, or correspondence). Uploaded by staff and
+ * stored in ATTACHMENTS_BUCKET under `${applicantId}/${id}`; the bytes are keyed
+ * by `id` so the original `fileName` can carry spaces/duplicates safely.
+ */
+export interface Attachment {
+  id: string
+  fileName: string
+  mime: string
+  size: number
+  uploadedAt: string
+  /** Email of the staff member who uploaded it, for a light audit trail. */
+  uploadedBy?: string
+}
+
 export interface Applicant {
   id: string
   firstName: string
@@ -48,6 +64,8 @@ export interface Applicant {
   station: string
   status: PacketStatus
   forms: FormState[]
+  /** General documents outside the required form set (admin-curated). */
+  attachments?: Attachment[]
   /** Identity an ID proves (Phase 1). Persisted so the portal can re-fill forms. */
   profile?: CandidateProfile
   /** Human-only declarations (OF-306 background, break-in-service, etc.). */
@@ -80,6 +98,23 @@ function formKey(applicantId: string, specId: string): string {
 /** Storage object key for an applicant's profile photo. */
 function photoKey(applicantId: string, fileName: string): string {
   return `${applicantId}/${fileName}`
+}
+
+/** Storage object key for a general attachment (id-keyed so names can collide safely). */
+function attachmentKey(applicantId: string, attachmentId: string): string {
+  return `${applicantId}/${attachmentId}`
+}
+
+// The attachments bucket isn't part of the original provisioning script, so make
+// sure it exists before first use (idempotent; the create is a no-op once made).
+let attachmentsBucketChecked = false
+async function ensureAttachmentsBucket(): Promise<void> {
+  if (attachmentsBucketChecked) return
+  const { error } = await supabase().storage.createBucket(ATTACHMENTS_BUCKET, { public: false })
+  if (error && !/exist/i.test(error.message)) {
+    throw new Error(`attachments bucket create failed: ${error.message}`)
+  }
+  attachmentsBucketChecked = true
 }
 
 function emptyForms(role: PacketRole): FormState[] {
@@ -465,6 +500,65 @@ export async function getPhotoBytes(applicantId: string, fileName: string): Prom
   return new Uint8Array(await data.arrayBuffer())
 }
 
+/**
+ * Attach a general document to a candidate: upload the bytes to
+ * ATTACHMENTS_BUCKET and append its metadata to the applicant. Returns the
+ * updated applicant + the new attachment record, or null if the id is unknown.
+ */
+export async function addAttachment(
+  applicantId: string,
+  fileName: string,
+  mime: string,
+  bytes: Uint8Array,
+  uploadedBy?: string,
+): Promise<{ applicant: Applicant; attachment: Attachment } | null> {
+  const existing = await getApplicant(applicantId)
+  if (!existing) return null
+
+  await ensureAttachmentsBucket()
+  const attachment: Attachment = {
+    id: randomUUID(),
+    fileName,
+    mime,
+    size: bytes.byteLength,
+    uploadedAt: new Date().toISOString(),
+    ...(uploadedBy ? { uploadedBy } : {}),
+  }
+  const { error } = await supabase().storage
+    .from(ATTACHMENTS_BUCKET)
+    .upload(attachmentKey(applicantId, attachment.id), Buffer.from(bytes), { contentType: mime, upsert: true })
+  if (error) throw new Error(`attachment upload failed: ${error.message}`)
+
+  const applicant = await patch(applicantId, a => {
+    a.attachments = [...(a.attachments ?? []), attachment]
+  })
+  return applicant ? { applicant, attachment } : null
+}
+
+/** Download a stored attachment's bytes from Storage, or null if absent. */
+export async function getAttachmentBytes(applicantId: string, attachmentId: string): Promise<Uint8Array | null> {
+  const { data, error } = await supabase().storage
+    .from(ATTACHMENTS_BUCKET)
+    .download(attachmentKey(applicantId, attachmentId))
+  if (error || !data) return null
+  return new Uint8Array(await data.arrayBuffer())
+}
+
+/**
+ * Delete one attachment: remove its bytes from Storage and drop its metadata.
+ * Returns the updated applicant, or null if the applicant doesn't exist. A
+ * missing attachment id is a no-op (still returns the applicant).
+ */
+export async function deleteAttachment(applicantId: string, attachmentId: string): Promise<Applicant | null> {
+  const existing = await getApplicant(applicantId)
+  if (!existing) return null
+
+  await supabase().storage.from(ATTACHMENTS_BUCKET).remove([attachmentKey(applicantId, attachmentId)])
+  return patch(applicantId, a => {
+    a.attachments = (a.attachments ?? []).filter(att => att.id !== attachmentId)
+  })
+}
+
 function derivePacketStatus(a: Applicant): PacketStatus {
   // Don't override terminal review states set by a coordinator.
   if (a.status === 'SUBMITTED' || a.status === 'ACCEPTED') return a.status
@@ -542,7 +636,7 @@ export async function deleteApplicant(id: string): Promise<boolean> {
   const sb = supabase()
 
   // Clear Storage objects under the applicant's prefix in each bucket.
-  for (const bucket of [FORMS_BUCKET, PHOTOS_BUCKET]) {
+  for (const bucket of [FORMS_BUCKET, PHOTOS_BUCKET, ATTACHMENTS_BUCKET]) {
     const { data: files } = await sb.storage.from(bucket).list(id)
     if (files && files.length) {
       await sb.storage.from(bucket).remove(files.map(f => `${id}/${f.name}`))

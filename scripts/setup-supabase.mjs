@@ -55,7 +55,7 @@ async function makeBuckets() {
   const sb = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false },
   })
-  for (const id of ['forms', 'photos']) {
+  for (const id of ['forms', 'photos', 'attachments']) {
     const { error } = await sb.storage.createBucket(id, { public: false })
     if (error && !/exist/i.test(error.message)) console.log(`BUCKET ${id} -> ${error.message}`)
     else console.log(`BUCKET ${id} OK`)

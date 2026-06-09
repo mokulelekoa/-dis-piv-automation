@@ -25,3 +25,5 @@ export function supabase(): SupabaseClient {
 
 export const FORMS_BUCKET = 'forms'
 export const PHOTOS_BUCKET = 'photos'
+/** General candidate documents outside the required form set (admin-curated). */
+export const ATTACHMENTS_BUCKET = 'attachments'

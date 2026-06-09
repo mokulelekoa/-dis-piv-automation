@@ -6,6 +6,7 @@ import { ROLE_LABELS } from '@/lib/forms/specs'
 import { emptyTracker, normalizePosition, applyAutoStages } from '@/lib/onboarding'
 import { STATUS_LABELS, STATUS_PILL, isPacketReleased } from '@/app/components/status'
 import PacketForms from '@/app/components/PacketForms'
+import AttachmentsPanel from '@/app/components/AttachmentsPanel'
 import OnboardingTimeline from '@/app/components/OnboardingTimeline'
 import Avatar from '@/app/components/Avatar'
 import BrandHeader from '@/app/components/BrandHeader'
@@ -19,6 +20,7 @@ export const runtime = 'nodejs'
 
 export default async function ApplicantDetail({ params }: { params: Promise<{ id: string }> }) {
   const me = await requireStaff()
+  const isAdmin = roleOf(me) === 'admin'
   const { id } = await params
   const applicant = await getApplicant(id)
   if (!applicant) notFound()
@@ -110,6 +112,10 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
 
         <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-slate-400">Required forms</h2>
         <PacketForms applicant={applicant} />
+
+        <div className="mt-6">
+          <AttachmentsPanel applicantId={applicant.id} attachments={applicant.attachments ?? []} canDelete={isAdmin} />
+        </div>
       </div>
     </main>
   )
