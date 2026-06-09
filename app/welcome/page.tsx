@@ -113,12 +113,18 @@ export default function Welcome() {
     setFinishing(true)
     try {
       const supabase = createBrowserSupabase()
-      await supabase.auth.updateUser({ data: { briefSeenAt: new Date().toISOString() } })
-      router.replace(dest)
-      router.refresh()
+      // Guard the network write so a stalled call can never freeze the button.
+      await Promise.race([
+        supabase.auth.updateUser({ data: { briefSeenAt: new Date().toISOString() } }),
+        new Promise(resolve => setTimeout(resolve, 5000)),
+      ])
     } catch {
-      setFinishing(false)
+      // Best effort — still leave the brief so the user isn't trapped here.
     }
+    // Hard navigation (not router.replace+refresh): forces the server to re-read
+    // the refreshed session cookie so the proxy re-evaluates cleanly, with no
+    // client soft-nav race that can leave the button spinning.
+    window.location.assign(dest)
   }
 
   if (loading) {
