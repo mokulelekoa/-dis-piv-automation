@@ -56,6 +56,12 @@ export interface Applicant {
   onboarding?: OnboardingTracker
   /** Candidate-uploaded profile photo, stored under .data/uploads/. */
   photo?: { fileName: string; mime: string; uploadedAt: string }
+  /**
+   * Set when a coordinator archives the candidate: the record and all uploads are
+   * kept, but the linked auth account is banned (sign-in revoked). Restorable —
+   * unarchiving lifts the ban. Distinct from deletion, which is irreversible.
+   */
+  archived?: { at: string }
   createdAt: string
   updatedAt: string
 }
@@ -510,6 +516,18 @@ export async function markReviewed(applicantId: string): Promise<Applicant | nul
     if (packetDownloadable(a) && a.status === 'READY_FOR_REVIEW') {
       a.status = 'REVIEWED'
     }
+  })
+}
+
+/**
+ * Archive or restore a candidate. Archiving stamps `archived.at` (the record and
+ * all uploads stay put); restoring clears it. Reversible counterpart to delete.
+ * Auth-account banning is handled separately by the caller (see
+ * setAuthUserBannedForApplicant) so a restore can lift the sign-in ban too.
+ */
+export async function setArchived(id: string, archived: boolean): Promise<Applicant | null> {
+  return patch(id, a => {
+    a.archived = archived ? { at: new Date().toISOString() } : undefined
   })
 }
 

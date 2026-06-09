@@ -1,6 +1,6 @@
-import { getApplicant, markReviewed, deleteApplicant } from '@/lib/store'
+import { getApplicant, markReviewed, deleteApplicant, setArchived } from '@/lib/store'
 import { canAccessApplicant, isAdminRequest } from '@/lib/auth'
-import { deleteAuthUserForApplicant } from '@/lib/activity'
+import { deleteAuthUserForApplicant, setAuthUserBannedForApplicant } from '@/lib/activity'
 import { supabase } from '@/lib/supabase'
 
 export async function GET(
@@ -22,6 +22,8 @@ export async function GET(
  * PATCH /api/applicants/[id] — admin actions on an applicant:
  *  - { action: 'review' }         move a complete packet to REVIEWED (unlocks download).
  *  - { action: 'reset-password' } email the candidate a branded link to set a new password.
+ *  - { action: 'archive' }        keep the record but revoke sign-in (reversible).
+ *  - { action: 'unarchive' }      restore an archived candidate and lift the ban.
  */
 export async function PATCH(
   request: Request,
@@ -50,6 +52,18 @@ export async function PATCH(
         { status: 409 },
       )
     }
+    return Response.json({ applicant })
+  }
+
+  if (body.action === 'archive' || body.action === 'unarchive') {
+    const archive = body.action === 'archive'
+    const applicant = await setArchived(id, archive)
+    if (!applicant) {
+      return Response.json({ error: 'Applicant not found' }, { status: 404 })
+    }
+    // Toggle the sign-in ban to match. Best-effort: the record state is the source
+    // of truth, and a candidate with no provisioned account is a no-op here.
+    await setAuthUserBannedForApplicant(id, archive)
     return Response.json({ applicant })
   }
 

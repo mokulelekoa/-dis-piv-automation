@@ -63,6 +63,26 @@ export async function deleteAuthUserForApplicant(applicantId: string): Promise<v
   }
 }
 
+/**
+ * Revoke or restore sign-in for the auth account linked to an applicant, matched
+ * on the applicant_id we stamp into app_metadata. Banning keeps the account (so a
+ * restore can lift it) but blocks every login. `true` bans effectively forever;
+ * `false` clears the ban. No-op if the candidate has no provisioned account.
+ */
+export async function setAuthUserBannedForApplicant(applicantId: string, banned: boolean): Promise<void> {
+  const sb = supabase()
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await sb.auth.admin.listUsers({ page, perPage: 200 })
+    if (error) return
+    const match = data.users.find(u => u.app_metadata?.applicant_id === applicantId)
+    if (match) {
+      await sb.auth.admin.updateUserById(match.id, { ban_duration: banned ? '876000h' : 'none' })
+      return
+    }
+    if (data.users.length < 200) return
+  }
+}
+
 /** Compact relative time ("just now", "5m ago", "3d ago", or a date). null → "Never". */
 export function timeAgo(iso: string | null | undefined): string {
   if (!iso) return 'Never'

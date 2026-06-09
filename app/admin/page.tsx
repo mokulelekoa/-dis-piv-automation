@@ -9,6 +9,7 @@ import UserBadge from '@/app/components/UserBadge'
 import PacketReviewActions from '@/app/components/PacketReviewActions'
 import DeleteCandidateButton from '@/app/components/DeleteCandidateButton'
 import ResetPasswordButton from '@/app/components/ResetPasswordButton'
+import ArchiveCandidateButton from '@/app/components/ArchiveCandidateButton'
 import { requireAdmin } from '@/lib/auth'
 import { loginActivityByApplicant, timeAgo, type LoginActivity } from '@/lib/activity'
 import {
@@ -34,10 +35,15 @@ function effectiveTracker(a: Applicant, act?: LoginActivity) {
 
 export default async function AdminDashboard() {
   const admin = await requireAdmin()
-  const applicants = await listApplicants()
+  const allApplicants = await listApplicants()
   const activity = await loginActivityByApplicant()
 
-  // Operational queue counts (a candidate can appear in several).
+  // Archived candidates stay in the database but are kept out of the active
+  // pipeline (table, queues) and surfaced in their own restorable section.
+  const applicants = allApplicants.filter(a => !a.archived)
+  const archived = allApplicants.filter(a => a.archived)
+
+  // Operational queue counts (a candidate can appear in several). Active only.
   const queueCounts = {} as Record<Queue, number>
   for (const q of QUEUE_ORDER) queueCounts[q] = 0
   for (const a of applicants) for (const q of queuesFor(effectiveTracker(a, activity.get(a.id)))) queueCounts[q]++
@@ -167,6 +173,7 @@ export default async function AdminDashboard() {
                     <td className="relative z-10 px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <ResetPasswordButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} email={a.email} hasAccount={!!act} />
+                        <ArchiveCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} archived={false} />
                         <DeleteCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} />
                       </div>
                     </td>
@@ -179,6 +186,40 @@ export default async function AdminDashboard() {
             </tbody>
           </table>
         </div>
+
+        {archived.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+              Archived &middot; {archived.length}
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              Records kept on file with sign-in revoked. Restore to return a candidate to the active pipeline.
+            </p>
+            <div className="mt-3 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <ul className="divide-y divide-slate-100">
+                {archived.map(a => (
+                  <li key={a.id} className="flex items-center gap-3 px-4 py-3">
+                    <Avatar firstName={a.firstName} lastName={a.lastName} size={32}
+                      photoUrl={a.photo ? `/api/applicants/${a.id}/photo` : undefined} />
+                    <div className="min-w-0 flex-1">
+                      <Link href={`/admin/applicants/${a.id}`} className="font-semibold text-slate-700 hover:text-blue-700">
+                        {a.lastName}, {a.firstName}
+                      </Link>
+                      <div className="text-[11px] text-slate-400">
+                        {ROLE_LABELS[a.role]} &middot; Station {a.station}
+                        {a.archived && <> &middot; archived {timeAgo(a.archived.at)}</>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <ArchiveCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} archived={true} />
+                      <DeleteCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
       </div>
     </main>
   )

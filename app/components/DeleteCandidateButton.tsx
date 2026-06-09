@@ -44,7 +44,7 @@ export default function DeleteCandidateButton({
     <>
       <button
         onClick={() => { setError(null); setOpen(true) }}
-        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-red-50 hover:text-red-600"
+        className="rounded-lg p-1.5 text-slate-500 transition hover:bg-red-50 hover:text-red-600"
         title={`Delete ${name}`}
         aria-label={`Delete ${name}`}
       >

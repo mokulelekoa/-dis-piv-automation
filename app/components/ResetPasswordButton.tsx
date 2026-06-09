@@ -58,7 +58,7 @@ export default function ResetPasswordButton({
       <button
         onClick={() => { setError(null); setSent(false); setOpen(true) }}
         disabled={!hasAccount}
-        className="rounded-lg p-1.5 text-slate-300 transition hover:bg-dis-teal/10 hover:text-dis-teal disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-300"
+        className="rounded-lg p-1.5 text-slate-500 transition hover:bg-dis-teal/10 hover:text-dis-teal disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-slate-500"
         title={hasAccount ? `Reset password for ${name}` : 'No account yet — send an invite first'}
         aria-label={`Reset password for ${name}`}
       >
