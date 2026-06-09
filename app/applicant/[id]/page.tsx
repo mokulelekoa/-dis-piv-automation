@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle2, AlertTriangle, PenLine, ArrowRight } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, PenLine, ArrowRight, Upload } from 'lucide-react'
 import { getApplicant, packetCompleteness, totalMissingCount } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
 import PacketForms from '@/app/components/PacketForms'
@@ -67,6 +67,14 @@ export default async function ApplicantSelfReview({ params }: { params: Promise<
             </span>
           </div>
         </Link>
+
+        <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-3.5">
+          <Upload size={16} className="mt-0.5 flex-shrink-0 text-slate-400" />
+          <p className="text-sm text-slate-600">
+            <span className="font-semibold text-slate-800">Already have these forms filled out?</span> You don&rsquo;t
+            need the walkthrough — just upload each completed VA form in its section below.
+          </p>
+        </div>
 
         <PacketForms applicant={applicant} />
 
