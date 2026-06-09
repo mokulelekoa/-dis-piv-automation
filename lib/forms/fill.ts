@@ -88,6 +88,10 @@ function normCountry(input: string): string {
   return input
 }
 
+function digitsOnly(s: string): string {
+  return s.replace(/\D/g, '')
+}
+
 function sexToGender(sex: string): string | undefined {
   const s = sex.trim().toUpperCase()
   if (s.startsWith('M')) return 'Male'
@@ -151,7 +155,7 @@ function fillBI(form: PDFForm, p: CandidateProfile, a: PacketAnswers) {
   setText(form, 'Last Name', p.lastName)
   setText(form, 'First Name', p.firstName)
   setText(form, 'Middle Name', middleOrNMN(p))
-  setText(form, 'Social Security Number', p.ssn)
+  setText(form, 'Social Security Number', digitsOnly(p.ssn)) // maxLength=9: dashes won't fit
   setText(form, 'Social Secuirty Number', p.ssn) // misspelled in the VA template; the visible box
   setText(form, 'Date of Birth', mmddyyyy(p.dateOfBirth))
   setText(form, 'City of Birth', p.placeOfBirthCity)
@@ -164,8 +168,12 @@ function fillBI(form: PDFForm, p: CandidateProfile, a: PacketAnswers) {
   selectDropdown(form, 'Gender', sexToGender(p.sex))
   selectDropdown(form, 'Marital Status', a.maritalStatus)
 
-  // Citizenship status: exactly one of D-C (US) / PR / FN.
-  check(form, 'D-C', a.citizenshipStatus === 'US')
+  // Citizenship on the BI form. The only checkboxes are Dual Citizenship (D-C),
+  // Permanent Resident (PR), and Foreign National (FN) — there is NO "U.S.
+  // Citizen" box. A plain U.S. citizen leaves all three blank ("Country of
+  // Citizenship" already states it). We never collect dual citizenship, so D-C
+  // is never auto-checked — checking it would falsely declare a second
+  // nationality on a federal background-investigation request.
   check(form, 'PR', a.citizenshipStatus === 'PR')
   check(form, 'FN', a.citizenshipStatus === 'FN')
 

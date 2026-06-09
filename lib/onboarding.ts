@@ -124,6 +124,49 @@ export function stageState(t: OnboardingTracker, key: StageKey): StageState {
   return t.stages.find(s => s.key === key) ?? { key, status: 'not_started' }
 }
 
+// ---- auto-derived vs. manual stages ----
+
+/**
+ * The two milestones the app observes directly, so they're derived live from
+ * platform signals instead of being hand-set by a coordinator:
+ *   - offer_accepted: complete once the candidate has signed in (invite accepted).
+ *   - package_sent:   complete once the admin releases the packet (REVIEWED+).
+ * Everything after that is a physical, real-world event the app can't see, so a
+ * coordinator records those by hand (MANUAL_STAGES).
+ */
+export const AUTO_STAGES: StageKey[] = ['offer_accepted', 'package_sent']
+export const MANUAL_STAGES: StageKey[] = STAGE_ORDER.filter(k => !AUTO_STAGES.includes(k))
+
+export interface AutoSignals {
+  /** Candidate has signed in at least once (invite accepted). */
+  signedIn: boolean
+  /** lastSignInAt — used as the offer_accepted date when known. */
+  signedInAt?: string
+  /** Packet released to the candidate (PacketStatus REVIEWED / SUBMITTED / ACCEPTED). */
+  packetReleased: boolean
+}
+
+/**
+ * Overlay the two event-derived stages onto a stored tracker. Pure, and the
+ * source of truth for the auto stages is the live signal — any stored value for
+ * offer_accepted/package_sent is intentionally ignored so the pipeline can't
+ * drift from auth/packet state. Manual stages pass through untouched.
+ */
+export function applyAutoStages(t: OnboardingTracker, sig: AutoSignals): OnboardingTracker {
+  const overlay: Partial<Record<StageKey, StageState>> = {
+    offer_accepted: {
+      key: 'offer_accepted',
+      status: sig.signedIn ? 'complete' : 'not_started',
+      ...(sig.signedIn && sig.signedInAt ? { date: sig.signedInAt.slice(0, 10) } : {}),
+    },
+    package_sent: {
+      key: 'package_sent',
+      status: sig.packetReleased ? 'complete' : 'not_started',
+    },
+  }
+  return { ...t, stages: STAGE_ORDER.map(key => overlay[key] ?? stageState(t, key)) }
+}
+
 /**
  * The candidate's current pipeline position: the first stage that isn't
  * complete. If every stage is complete they've started; if any stage is

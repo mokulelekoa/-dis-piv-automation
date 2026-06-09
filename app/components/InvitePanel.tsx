@@ -1,16 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { UserPlus, ShieldPlus, Loader2, Copy, Check, X } from 'lucide-react'
+import { UserPlus, ShieldPlus, Loader2, MailCheck, X } from 'lucide-react'
 
 type Kind = 'candidate' | 'admin'
 
 interface InviteResult {
-  code: string
+  emailed: boolean
   email: string
   role: string
-  expiresAt: string
-  signupUrl: string
   applicantId?: string
 }
 
@@ -74,33 +72,34 @@ export default function InvitePanel({ roles }: { roles: [string, string][] }) {
     }
   }
 
-  // Result card — shown after a successful mint.
+  // Result card — shown after the invite email goes out.
   if (result) {
     return (
       <div className="rounded-2xl border border-dis-teal/30 bg-white p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="text-sm font-black text-dis-navy">
-              Invite ready for {result.email}
-            </h3>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Share this link or code. It&rsquo;s single-use and expires{' '}
-              {new Date(result.expiresAt).toLocaleDateString()}.
-            </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <MailCheck size={20} className="mt-0.5 flex-shrink-0 text-dis-teal" />
+            <div>
+              <h3 className="text-sm font-black text-dis-navy">
+                Invitation emailed to {result.email}
+              </h3>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {result.role === 'admin'
+                  ? 'They’ll get a link to set a password and join as a teammate.'
+                  : 'They’ll get a link to set a password, then drop into their onboarding packet.'}
+              </p>
+            </div>
           </div>
           <button onClick={reset} className="text-slate-400 hover:text-slate-600" aria-label="Close">
             <X size={18} />
           </button>
         </div>
 
-        <CopyRow label="Signup link" value={result.signupUrl} />
-        <CopyRow label="Access code" value={result.code} mono />
-
         <button
           onClick={reset}
           className="mt-4 rounded-xl bg-accent-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-accent-600"
         >
-          Create another invite
+          Invite someone else
         </button>
       </div>
     )
@@ -199,38 +198,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
       {children}
     </label>
-  )
-}
-
-function CopyRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  const [copied, setCopied] = useState(false)
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      /* clipboard unavailable — the value is selectable in the field */
-    }
-  }
-  return (
-    <div className="mt-3">
-      <span className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</span>
-      <div className="flex items-center gap-2">
-        <input
-          readOnly
-          value={value}
-          onFocus={e => e.currentTarget.select()}
-          className={`w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 focus:outline-none ${mono ? 'font-mono tracking-wide' : ''}`}
-        />
-        <button
-          onClick={copy}
-          className="flex shrink-0 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
-        >
-          {copied ? <Check size={14} className="text-green-600" /> : <Copy size={14} />}
-          {copied ? 'Copied' : 'Copy'}
-        </button>
-      </div>
-    </div>
   )
 }

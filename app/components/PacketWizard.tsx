@@ -14,7 +14,8 @@ import {
 import { requiredFormsForRole, getSpec, ROLE_LABELS, type PacketRole } from '@/lib/forms/specs'
 import { US_STATE_OPTIONS } from '@/lib/geo'
 import type { FormState } from '@/lib/store'
-import PhotoUpload from './PhotoUpload'
+import type { ExtractedIdData } from '@/lib/ai/id-parser'
+import IdScanDropzone from './IdScanDropzone'
 import FormUpload from './FormUpload'
 import {
   Section, Grid, Text, Area, Check, SelectField, YesNoRow, Options, MilitaryRows,
@@ -28,7 +29,7 @@ import {
  * print → sign → upload; digital signatures are not VA-acceptable here.)
  */
 export default function PacketWizard({
-  applicantId, role, initialProfile, initialAnswers, initialForms, firstName, lastName, hasPhoto,
+  applicantId, role, initialProfile, initialAnswers, initialForms, firstName,
 }: {
   applicantId: string
   role: PacketRole
@@ -36,12 +37,11 @@ export default function PacketWizard({
   initialAnswers: PacketAnswers | null
   initialForms: FormState[]
   firstName: string
-  lastName: string
-  hasPhoto: boolean
 }) {
   const router = useRouter()
   const [profile, setProfile] = useState<CandidateProfile>(initialProfile ?? emptyProfile())
   const [answers, setAnswers] = useState<PacketAnswers>(initialAnswers ?? emptyAnswers())
+  const [autoFilled, setAutoFilled] = useState<AutoFilled>({})
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,9 +49,44 @@ export default function PacketWizard({
 
   function p<K extends keyof CandidateProfile>(k: K, v: CandidateProfile[K]) {
     setProfile(prev => ({ ...prev, [k]: v }))
+    // A hand-edit overrides the ID — drop the "from ID" badge for that field.
+    setAutoFilled(af => (af[k] ? { ...af, [k]: false } : af))
   }
   function a<K extends keyof PacketAnswers>(k: K, v: PacketAnswers[K]) {
     setAnswers(prev => ({ ...prev, [k]: v }))
+  }
+
+  // Merge the fields a scanned ID can prove into the profile, without clobbering
+  // anything the candidate already typed, and flag what we filled for the badge.
+  function applyExtractedId(d: ExtractedIdData) {
+    setProfile(prev => {
+      const next = { ...prev }
+      const filled: AutoFilled = {}
+      const set = (k: keyof CandidateProfile, v: string | null | undefined) => {
+        if (v && !String(next[k] ?? '').trim()) { (next[k] as string) = v; filled[k] = true }
+      }
+      set('firstName', d.firstName)
+      set('middleName', d.middleName)
+      set('lastName', d.lastName)
+      set('suffix', d.suffix)
+      set('dateOfBirth', d.dateOfBirth)
+      set('sex', d.sex)
+      set('placeOfBirthCity', d.placeOfBirthCity)
+      set('placeOfBirthState', d.placeOfBirthState)
+      set('placeOfBirthCountry', d.placeOfBirthCountry)
+      set('citizenshipCountry', d.citizenshipCountry)
+      set('addressLine', d.addressLine)
+      set('addressCity', d.addressCity)
+      set('addressState', d.addressState)
+      set('addressZip', d.addressZip)
+      if (d.ssn && !next.ssn.trim()) { next.ssn = d.ssn; filled.ssn = true }
+      // ID printed no middle name and none typed yet → tentatively flag NMN.
+      if (!next.middleName.trim() && d.firstName && d.lastName) {
+        next.hasNoMiddleName = next.hasNoMiddleName || !d.middleName
+      }
+      setAutoFilled(af => ({ ...af, ...filled }))
+      return next
+    })
   }
 
   const requiredForms = requiredFormsForRole(role)
@@ -114,21 +149,21 @@ export default function PacketWizard({
         return out
       },
       render: () => (
-        <Section title="Your identity" hint="Pulled from your ID where possible. Confirm everything is correct — these feed every form.">
+        <Section title="Your identity" hint="Drop in an ID and we'll fill what it can prove. Confirm everything is correct — these feed every form.">
           <div className="mb-6">
-            <PhotoUpload applicantId={applicantId} firstName={firstName} lastName={lastName} hasPhoto={hasPhoto} />
+            <IdScanDropzone onExtract={applyExtractedId} />
           </div>
           <Grid>
-            <Text label="First name" value={profile.firstName} onChange={v => p('firstName', v)} />
-            <Text label="Middle name" value={profile.middleName} onChange={v => p('middleName', v)} disabled={profile.hasNoMiddleName}
+            <Text label="First name" value={profile.firstName} onChange={v => p('firstName', v)} highlight={autoFilled.firstName} />
+            <Text label="Middle name" value={profile.middleName} onChange={v => p('middleName', v)} disabled={profile.hasNoMiddleName} highlight={autoFilled.middleName}
               note={<Check label='No middle name (renders as "NMN")' checked={profile.hasNoMiddleName} onChange={v => p('hasNoMiddleName', v)} />} />
-            <Text label="Last name" value={profile.lastName} onChange={v => p('lastName', v)} />
-            <Text label="Suffix" value={profile.suffix} onChange={v => p('suffix', v)} placeholder="Jr, Sr, II…" />
-            <Text label="Date of birth" type="date" value={profile.dateOfBirth} onChange={v => p('dateOfBirth', v)} />
-            <Text label="Sex" value={profile.sex} onChange={v => p('sex', v)} placeholder="M / F" />
-            <Text label="Social Security Number" value={profile.ssn} onChange={v => p('ssn', v)} className="sm:col-span-2" />
-            <PlaceOfBirthFields profile={profile} set={p} />
-            <Text label="Country of citizenship" value={profile.citizenshipCountry} onChange={v => p('citizenshipCountry', v)} />
+            <Text label="Last name" value={profile.lastName} onChange={v => p('lastName', v)} highlight={autoFilled.lastName} />
+            <Text label="Suffix" value={profile.suffix} onChange={v => p('suffix', v)} placeholder="Jr, Sr, II…" highlight={autoFilled.suffix} />
+            <Text label="Date of birth" type="date" value={profile.dateOfBirth} onChange={v => p('dateOfBirth', v)} highlight={autoFilled.dateOfBirth} />
+            <Text label="Sex" value={profile.sex} onChange={v => p('sex', v)} placeholder="M / F" highlight={autoFilled.sex} />
+            <Text label="Social Security Number" value={profile.ssn} onChange={v => p('ssn', v)} className="sm:col-span-2" highlight={autoFilled.ssn} />
+            <PlaceOfBirthFields profile={profile} set={p} autoFilled={autoFilled} />
+            <Text label="Country of citizenship" value={profile.citizenshipCountry} onChange={v => p('citizenshipCountry', v)} highlight={autoFilled.citizenshipCountry} />
             <Text label="Email" type="email" value={profile.email} onChange={v => p('email', v)} />
           </Grid>
         </Section>
@@ -147,19 +182,19 @@ export default function PacketWizard({
       },
       render: () => (
         <>
-          <Section title="Citizenship status" hint="Only you can confirm this — it's never inferred from a document.">
-            <Options label="I am a…" value={answers.citizenshipStatus}
+          <Section title="Citizenship Status" hint="Only you can confirm this — it's never inferred from a document.">
+            <Options label="3b. Are you a U.S. Citizen?" value={answers.citizenshipStatus}
               options={[{ v: 'US', l: 'U.S. Citizen' }, { v: 'PR', l: 'Permanent Resident' }, { v: 'FN', l: 'Foreign National' }]}
               onChange={v => a('citizenshipStatus', v as PacketAnswers['citizenshipStatus'])} />
             {isPRorFN && (
               <YesNoRow label="Have you lived in the U.S. for the last 3 consecutive years?"
                 value={answers.livedInUS3Years} onChange={v => a('livedInUS3Years', v)} />
             )}
-            <SelectField label="Marital status" value={answers.maritalStatus}
+            <SelectField label="Marital Status" value={answers.maritalStatus}
               options={[...MARITAL_OPTIONS]} onChange={v => a('maritalStatus', v)} />
           </Section>
           <div className="mt-8">
-            <Section title="Other names used" hint="Maiden name, prior legal names, or aliases. Leave blank if none.">
+            <Section title="Other Names Ever Used" hint="For example, maiden name, nickname, etc. Leave blank if none.">
               <Grid>
                 <Text label="Other name 1" value={answers.otherNamesUsed[0] ?? ''}
                   onChange={v => a('otherNamesUsed', [v, answers.otherNamesUsed[1] ?? ''])} />
@@ -185,21 +220,48 @@ export default function PacketWizard({
         return out
       },
       render: () => (
-        <Section title="Selective Service & military">
-          <Options label="Have you registered with the Selective Service System?" value={answers.registeredSelectiveService}
-            options={[{ v: 'Yes', l: 'Yes' }, { v: 'No', l: 'No' }, { v: 'NA', l: 'Not applicable' }]}
-            onChange={v => a('registeredSelectiveService', v as PacketAnswers['registeredSelectiveService'])} />
-          <YesNoRow label="Have you ever served in the U.S. military?"
-            value={answers.servedMilitary} onChange={v => a('servedMilitary', v)} />
-          {answers.servedMilitary === 'Yes' && (
-            <MilitaryRows value={answers.militaryService} onChange={v => a('militaryService', v)} />
-          )}
-        </Section>
+        <>
+          <Section title="Selective Service Registration" hint="If you are a male born after December 31, 1959, and are at least 18 years of age, civil service employment law (5 U.S.C. 3328) requires that you must register with the Selective Service System, unless you meet certain exemptions.">
+            <Options label="7b. Have you registered with the Selective Service System?" value={answers.registeredSelectiveService}
+              options={[{ v: 'Yes', l: 'Yes' }, { v: 'No', l: 'No' }, { v: 'NA', l: 'Not applicable' }]}
+              onChange={v => a('registeredSelectiveService', v as PacketAnswers['registeredSelectiveService'])} />
+          </Section>
+
+          <div className="mt-8">
+            <Section title="Military Service">
+              <div>
+                <div className="flex items-start justify-between gap-4">
+                  <p className="text-sm text-slate-700">
+                    <span className="font-semibold">8.</span> Have you ever served in the United States military?{' '}
+                    <span className="text-slate-500">(If &ldquo;YES&rdquo;, provide information below)</span>
+                  </p>
+                  <div className="flex flex-shrink-0 gap-1.5">
+                    {(['Yes', 'No'] as const).map(opt => (
+                      <button key={opt} type="button" onClick={() => a('servedMilitary', opt)}
+                        className={`rounded-lg border px-3 py-1 text-xs font-semibold uppercase transition
+                          ${answers.servedMilitary === opt ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-slate-600 hover:border-blue-400'}`}>
+                        {opt === 'Yes' ? 'Yes' : 'No'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  If your only active duty was training in the Reserves or National Guard, answer &ldquo;NO.&rdquo;
+                  If you answered &ldquo;YES,&rdquo; list the branch, dates, and type of discharge for all active duty.
+                </p>
+              </div>
+
+              {answers.servedMilitary === 'Yes' && (
+                <MilitaryRows value={answers.militaryService} onChange={v => a('militaryService', v)} />
+              )}
+            </Section>
+          </div>
+        </>
       ),
     },
     {
       key: 'background',
-      title: 'Background declarations',
+      title: 'Background Information',
       forms: ['OF-306'],
       validate: () => {
         const out: string[] = []
@@ -217,21 +279,34 @@ export default function PacketWizard({
         return out
       },
       render: () => (
-        <Section title="Background declarations" hint="Federal law requires honest answers. A 'Yes' is not automatically disqualifying — but must be explained.">
-          <YesNoRow label="In the last 7 years, have you been convicted, imprisoned, on probation, or on parole?" value={answers.convicted7yr} onChange={v => a('convicted7yr', v)} />
-          <YesNoRow label="Have you been court-martialed in the last 7 years?" value={answers.courtMartialed7yr} onChange={v => a('courtMartialed7yr', v)} />
-          <YesNoRow label="Are you currently under charges for any violation of law?" value={answers.underCharges} onChange={v => a('underCharges', v)} />
-          <YesNoRow label="Have you been fired, debarred, or quit after being told you would be fired?" value={answers.firedOrQuit} onChange={v => a('firedOrQuit', v)} />
-          <YesNoRow label="Are you delinquent on any Federal debt?" value={answers.delinquentFederalDebt} onChange={v => a('delinquentFederalDebt', v)} />
+        <Section title="Background Information" hint="For all questions, provide all additional requested information under item 16 or on attached sheets. The circumstances of each event you list will be considered. However, in most cases you can still be considered for Federal jobs.">
+          <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
+            For questions 9, 10, and 11, your answers should include convictions resulting from a plea of nolo
+            contendere (no contest), but omit (1) traffic fines of $300 or less, (2) any violation of law committed
+            before your 16th birthday, (3) any violation of law committed before your 18th birthday if finally
+            decided in juvenile court or under a Youth Offender law, (4) any conviction set aside under the Federal
+            Youth Corrections Act or similar state law, and (5) any conviction for which the record was expunged
+            under Federal or state law.
+          </p>
+          <YesNoRow block value={answers.convicted7yr} onChange={v => a('convicted7yr', v)}
+            label={<><strong>9.</strong> During the last 7 years, have you been convicted, been imprisoned, been on probation, or been on parole? (Includes felonies, firearms or explosives violations, misdemeanors, and all other offenses.) If &ldquo;YES,&rdquo; use item 16 to provide the date, explanation of the violation, place of occurrence, and the name and address of the police department or court involved.</>} />
+          <YesNoRow block value={answers.courtMartialed7yr} onChange={v => a('courtMartialed7yr', v)}
+            label={<><strong>10.</strong> Have you been convicted by a military court-martial in the past 7 years? (If no military service, answer &ldquo;NO.&rdquo;) If &ldquo;YES,&rdquo; use item 16 to provide the date, explanation of the violation, place of occurrence, and the name and address of the military authority or court involved.</>} />
+          <YesNoRow block value={answers.underCharges} onChange={v => a('underCharges', v)}
+            label={<><strong>11.</strong> Are you currently under charges for any violation of law? If &ldquo;YES,&rdquo; use item 16 to provide the date, explanation of the charges, place of occurrence, and the name and address of the police department or court involved.</>} />
+          <YesNoRow block value={answers.firedOrQuit} onChange={v => a('firedOrQuit', v)}
+            label={<><strong>12.</strong> During the last 5 years, have you been fired from any job for any reason, did you quit after being told that you would be fired, did you leave any job by mutual agreement because of specific problems, or were you debarred from Federal employment by the Office of Personnel Management or any other Federal agency? If &ldquo;YES,&rdquo; use item 16 to provide the date, an explanation of the problem, reason for leaving, and the employer&rsquo;s name and address.</>} />
+          <YesNoRow block value={answers.delinquentFederalDebt} onChange={v => a('delinquentFederalDebt', v)}
+            label={<><strong>13.</strong> Are you delinquent on any Federal debt? (Includes delinquencies arising from Federal taxes, loans, overpayment of benefits, and other debts to the U.S. Government, plus defaults of Federally guaranteed or insured loans such as student and home mortgage loans.) If &ldquo;YES,&rdquo; use item 16 to provide the type, length, and amount of the delinquency or default, and steps that you are taking to correct the error or repay the debt.</>} />
           {showExplanation && (
-            <Area label="Explanation (required for any 'Yes' above)" value={answers.backgroundExplanation} onChange={v => a('backgroundExplanation', v)} />
+            <Area label="16. Provide details requested in items 7 through 15 and 18c in the space below or on attached sheets." value={answers.backgroundExplanation} onChange={v => a('backgroundExplanation', v)} />
           )}
         </Section>
       ),
     },
     {
       key: 'fedemployment',
-      title: 'Federal employment history',
+      title: 'Additional Questions',
       forms: ['OF-306'],
       validate: () => {
         const out: string[] = []
@@ -240,16 +315,24 @@ export default function PacketWizard({
         return out
       },
       render: () => (
-        <Section title="Federal employment history">
-          <YesNoRow label="Do any of your relatives work for the agency you're applying to?" value={answers.relativesInAgency} onChange={v => a('relativesInAgency', v)} />
-          <YesNoRow label="Do you receive (or have you applied for) military/Federal/D.C. retirement or pension?" value={answers.receivesFederalRetirement} onChange={v => a('receivesFederalRetirement', v)} />
-          <Text label="When did you leave your last Federal job? (leave blank if never)" value={answers.leftLastFederalJob} onChange={v => a('leftLastFederalJob', v)} placeholder="MM/DD/YYYY" />
-          <Options label="Did you waive Basic or optional life insurance?" value={answers.waivedLifeInsurance}
-            options={[{ v: 'Yes', l: 'Yes' }, { v: 'No', l: 'No' }, { v: 'Do Not Know', l: "Don't know" }]}
+        <Section title="Additional Questions">
+          <YesNoRow block value={answers.relativesInAgency} onChange={v => a('relativesInAgency', v)}
+            label={<><strong>14.</strong> Do any of your relatives work for the agency or government organization to which you are submitting this form? (Include: father, mother, husband, wife, son, daughter, brother, sister, uncle, aunt, first cousin, nephew, niece, father-in-law, mother-in-law, son-in-law, daughter-in-law, brother-in-law, sister-in-law, stepfather, stepmother, stepson, stepdaughter, stepbrother, stepsister, half-brother, and half-sister.) If &ldquo;YES,&rdquo; use item 16 to provide the relative&rsquo;s name, relationship, and the department, agency, or branch of the Armed Forces for which your relative works.</>} />
+          <YesNoRow block value={answers.receivesFederalRetirement} onChange={v => a('receivesFederalRetirement', v)}
+            label={<><strong>15.</strong> Do you receive, or have you ever applied for, retirement pay, pension, or other retired pay based on military, Federal civilian, or District of Columbia Government service?</>} />
+          <p className="pt-2 text-xs text-slate-500">
+            <strong>18.</strong> Appointee (Only respond if you have been employed by the Federal Government before): Your
+            elections of life insurance during previous Federal employment may affect your eligibility for life
+            insurance during your new appointment. These questions are asked to help your personnel office make a
+            correct determination.
+          </p>
+          <Text label="18a. When did you leave your last Federal job?" value={answers.leftLastFederalJob} onChange={v => a('leftLastFederalJob', v)} placeholder="MM / DD / YYYY" />
+          <Options label="18b. When you worked for the Federal Government the last time, did you waive Basic Life Insurance or any type of optional life insurance?" value={answers.waivedLifeInsurance}
+            options={[{ v: 'Yes', l: 'Yes' }, { v: 'No', l: 'No' }, { v: 'Do Not Know', l: 'Do Not Know' }]}
             onChange={v => a('waivedLifeInsurance', v as PacketAnswers['waivedLifeInsurance'])} />
           {answers.waivedLifeInsurance === 'Yes' && (
-            <Options label="Did you later cancel the waivers?" value={answers.canceledWaivers}
-              options={[{ v: 'Yes', l: 'Yes' }, { v: 'No', l: 'No' }, { v: 'Do Not Know', l: "Don't know" }]}
+            <Options label={'18c. If you answered "YES" to item 18b, did you later cancel the waiver(s)? If your answer to item 18c is "NO," use item 16 to identify the type(s) of insurance for which waivers were not canceled.'} value={answers.canceledWaivers}
+              options={[{ v: 'Yes', l: 'Yes' }, { v: 'No', l: 'No' }, { v: 'Do Not Know', l: 'Do Not Know' }]}
               onChange={v => a('canceledWaivers', v as PacketAnswers['canceledWaivers'])} />
           )}
         </Section>
@@ -268,13 +351,19 @@ export default function PacketWizard({
         return out
       },
       render: () => (
-        <Section title="Continuous service self-certification" hint="Tell us about any break in your federal service.">
-          <Options label="Select the statement that applies to you:" value={answers.breakInService}
+        <Section title="Self Certification of Continuous Service"
+          hint="I hereby certify my break in service from my last federal employment is indicated by the block checked below.">
+          <Options label="(Select One)" value={answers.breakInService}
             options={BREAK_IN_SERVICE_OPTIONS.map(o => ({ v: o.value, l: o.label }))}
             onChange={v => a('breakInService', v as PacketAnswers['breakInService'])} stacked />
           {answers.breakInService && answers.breakInService !== 'none' && (
-            <Text label="Date you left Federal employment" value={answers.dateLeftFederalEmployment} onChange={v => a('dateLeftFederalEmployment', v)} placeholder="MM/DD/YYYY" />
+            <Text label="Date I left federal employment was" value={answers.dateLeftFederalEmployment} onChange={v => a('dateLeftFederalEmployment', v)} placeholder="MM / DD / YYYY" />
           )}
+          <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
+            Federal employment is defined as any branch of the United States military (Active, Guard or Reserve),
+            federal government civilian employee (any federal government agency), or a contractor working for the
+            federal government.
+          </p>
         </Section>
       ),
     },
@@ -287,7 +376,7 @@ export default function PacketWizard({
         <ReviewStep applicantId={applicantId} requiredForms={requiredForms} initialForms={initialForms} />
       ),
     },
-  ], [profile, answers, isPRorFN, showExplanation, applicantId, firstName, lastName, hasPhoto, role, requiredForms, initialForms])
+  ], [profile, answers, autoFilled, isPRorFN, showExplanation, applicantId, firstName, role, requiredForms, initialForms])
 
   const current = steps[step]
   const stepProblems = current.validate()
@@ -402,6 +491,9 @@ interface WizardStep {
   render: () => React.ReactNode
 }
 
+/** Which profile keys the last ID scan populated (drives the "from ID" badge). */
+type AutoFilled = Partial<Record<keyof CandidateProfile, boolean>>
+
 /* ---------- review step ---------- */
 
 function ReviewStep({ applicantId, requiredForms, initialForms }: {
@@ -470,9 +562,10 @@ function ReviewStep({ applicantId, requiredForms, initialForms }: {
  * the VA AcroForm). State of birth is shown only for U.S. births — foreign-born
  * candidates have no state, so it's hidden and cleared (mirrors the form spec).
  */
-function PlaceOfBirthFields({ profile, set }: {
+function PlaceOfBirthFields({ profile, set, autoFilled }: {
   profile: CandidateProfile
   set: <K extends keyof CandidateProfile>(k: K, v: CandidateProfile[K]) => void
+  autoFilled: AutoFilled
 }) {
   const [zip, setZip] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
@@ -513,10 +606,10 @@ function PlaceOfBirthFields({ profile, set }: {
             {msg || 'Type a US ZIP to auto-fill city and state.'}
           </p>
         </div>
-        <Text label="City of birth" value={profile.placeOfBirthCity} onChange={v => set('placeOfBirthCity', v)} />
+        <Text label="City of birth" value={profile.placeOfBirthCity} onChange={v => set('placeOfBirthCity', v)} highlight={autoFilled.placeOfBirthCity} />
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Text label="Country of birth" value={country} placeholder="USA"
+        <Text label="Country of birth" value={country} placeholder="USA" highlight={autoFilled.placeOfBirthCountry}
           onChange={v => { set('placeOfBirthCountry', v); if (v.trim() && !isUSCountry(v)) set('placeOfBirthState', '') }} />
         {showState && (
           <SelectField label="State of birth" value={profile.placeOfBirthState}

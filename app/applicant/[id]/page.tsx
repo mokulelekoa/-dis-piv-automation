@@ -5,6 +5,7 @@ import { getApplicant, packetCompleteness, totalMissingCount } from '@/lib/store
 import { ROLE_LABELS } from '@/lib/forms/specs'
 import PacketForms from '@/app/components/PacketForms'
 import BrandHeader from '@/app/components/BrandHeader'
+import UserBadge from '@/app/components/UserBadge'
 import { requireApplicantAccess } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
@@ -12,7 +13,7 @@ export const runtime = 'nodejs'
 
 export default async function ApplicantSelfReview({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  await requireApplicantAccess(id)
+  const user = await requireApplicantAccess(id)
   const applicant = await getApplicant(id)
   if (!applicant) notFound()
 
@@ -22,7 +23,8 @@ export default async function ApplicantSelfReview({ params }: { params: Promise<
 
   return (
     <main className="min-h-screen bg-blue-50">
-      <BrandHeader subtitle="Your CMOP Packet" />
+      <BrandHeader subtitle="Your CMOP Packet"
+        right={<UserBadge email={user.email ?? null} role="candidate" name={`${applicant.firstName} ${applicant.lastName}`} />} />
       <div className="mx-auto max-w-2xl px-4 py-10">
         <header className="mb-6">
           <h1 className="text-2xl font-black text-slate-900">Your CMOP packet</h1>

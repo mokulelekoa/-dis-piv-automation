@@ -1,7 +1,7 @@
 'use client'
 
 import { Plus, Trash2 } from 'lucide-react'
-import type { YesNo, MilitaryService } from '@/lib/forms/questions'
+import { type YesNo, type MilitaryService, MILITARY_BRANCH_OPTIONS } from '@/lib/forms/questions'
 
 /**
  * Shared presentational form primitives used by the packet wizard (and any other
@@ -23,17 +23,28 @@ export function Grid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">{children}</div>
 }
 
-export function Text({ label, value, onChange, type = 'text', placeholder, disabled, className, note }: {
+export function FromIdBadge() {
+  return (
+    <span className="ml-2 rounded bg-green-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-green-700">
+      from ID
+    </span>
+  )
+}
+
+export function Text({ label, value, onChange, type = 'text', placeholder, disabled, className, note, highlight }: {
   label: string; value: string; onChange: (v: string) => void; type?: string
-  placeholder?: string; disabled?: boolean; className?: string; note?: React.ReactNode
+  placeholder?: string; disabled?: boolean; className?: string; note?: React.ReactNode; highlight?: boolean
 }) {
   return (
     <div className={className}>
-      <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</label>
+      <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">
+        {label}{highlight && <FromIdBadge />}
+      </label>
       <input type={type} value={value} placeholder={placeholder} disabled={disabled}
         onChange={e => onChange(e.target.value)}
         className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30
-          ${disabled ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400' : 'border-slate-200 bg-white'}`} />
+          ${disabled ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
+            : highlight ? 'border-green-300 bg-green-50/40' : 'border-slate-200 bg-white'}`} />
       {note}
     </div>
   )
@@ -75,19 +86,34 @@ export function SelectField({ label, value, options, onChange, placeholder = 'Se
   )
 }
 
-export function YesNoRow({ label, value, onChange }: { label: string; value: YesNo | '' | 'NA' | 'Do Not Know'; onChange: (v: YesNo) => void }) {
+export function YesNoRow({ label, value, onChange, block }: {
+  label: React.ReactNode; value: YesNo | '' | 'NA' | 'Do Not Know'; onChange: (v: YesNo) => void; block?: boolean
+}) {
+  const buttons = (
+    <div className="flex flex-shrink-0 gap-1.5">
+      {(['Yes', 'No'] as YesNo[]).map(opt => (
+        <button key={opt} type="button" onClick={() => onChange(opt)}
+          className={`rounded-lg border px-3 py-1 text-xs font-semibold uppercase transition
+            ${value === opt ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-slate-600 hover:border-blue-400'}`}>
+          {opt}
+        </button>
+      ))}
+    </div>
+  )
+  // Long, multi-sentence form questions read better with the prompt full-width
+  // and the Yes/No beneath it; short ones keep the compact inline layout.
+  if (block) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <p className="text-sm leading-relaxed text-slate-700">{label}</p>
+        <div className="mt-3">{buttons}</div>
+      </div>
+    )
+  }
   return (
     <div className="flex items-start justify-between gap-4">
       <p className="text-sm text-slate-700">{label}</p>
-      <div className="flex flex-shrink-0 gap-1.5">
-        {(['Yes', 'No'] as YesNo[]).map(opt => (
-          <button key={opt} type="button" onClick={() => onChange(opt)}
-            className={`rounded-lg border px-3 py-1 text-xs font-semibold transition
-              ${value === opt ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-slate-600 hover:border-blue-400'}`}>
-            {opt}
-          </button>
-        ))}
-      </div>
+      {buttons}
     </div>
   )
 }
@@ -120,7 +146,11 @@ export function MilitaryRows({ value, onChange }: { value: MilitaryService[]; on
     <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
       {rows.map((r, i) => (
         <div key={i} className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-          <input placeholder="Branch" value={r.branch} onChange={e => update(i, { branch: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900" />
+          <select value={r.branch} onChange={e => update(i, { branch: e.target.value })}
+            className={`rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs ${r.branch ? 'text-slate-900' : 'text-slate-400'}`}>
+            <option value="">Branch…</option>
+            {MILITARY_BRANCH_OPTIONS.map(b => <option key={b} value={b} className="text-slate-900">{b}</option>)}
+          </select>
           <input placeholder="From MM/DD/YYYY" value={r.from} onChange={e => update(i, { from: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900" />
           <input placeholder="To MM/DD/YYYY" value={r.to} onChange={e => update(i, { to: e.target.value })} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-900" />
           <div className="flex gap-1">

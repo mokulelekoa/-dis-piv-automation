@@ -4,6 +4,7 @@ export const STATUS_LABELS: Record<PacketStatus, string> = {
   DRAFT: 'Draft',
   IN_PROGRESS: 'In progress',
   READY_FOR_REVIEW: 'Ready for review',
+  REVIEWED: 'Reviewed',
   SUBMITTED: 'Submitted',
   REJECTED: 'Needs fixes',
   ACCEPTED: 'Accepted',
@@ -14,9 +15,15 @@ export const STATUS_PILL: Record<PacketStatus, string> = {
   DRAFT: 'bg-slate-100 text-slate-600 border-slate-200',
   IN_PROGRESS: 'bg-amber-50 text-amber-700 border-amber-200',
   READY_FOR_REVIEW: 'bg-blue-50 text-blue-700 border-blue-200',
+  REVIEWED: 'bg-teal-50 text-teal-700 border-teal-200',
   SUBMITTED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   REJECTED: 'bg-red-50 text-red-700 border-red-200',
   ACCEPTED: 'bg-green-50 text-green-700 border-green-200',
+}
+
+/** Packet has been released to the candidate — a human sign-off, never automatic. */
+export function isPacketReleased(status: PacketStatus): boolean {
+  return status === 'REVIEWED' || status === 'SUBMITTED' || status === 'ACCEPTED'
 }
 
 export type FormHealth = 'empty' | 'incomplete' | 'complete'

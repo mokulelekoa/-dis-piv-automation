@@ -1,14 +1,19 @@
 import Link from 'next/link'
-import { listApplicants, packetCompleteness, totalMissingCount, type Applicant } from '@/lib/store'
+import { listApplicants, packetCompleteness, totalMissingCount, packetDownloadable, type Applicant } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
-import { STATUS_LABELS, STATUS_PILL, formHealth, HEALTH_DOT } from '@/app/components/status'
+import { STATUS_LABELS, STATUS_PILL, formHealth, HEALTH_DOT, isPacketReleased } from '@/app/components/status'
 import Avatar from '@/app/components/Avatar'
 import BrandHeader from '@/app/components/BrandHeader'
 import InvitePanel from '@/app/components/InvitePanel'
+import UserBadge from '@/app/components/UserBadge'
+import PacketReviewActions from '@/app/components/PacketReviewActions'
+import DeleteCandidateButton from '@/app/components/DeleteCandidateButton'
+import ResetPasswordButton from '@/app/components/ResetPasswordButton'
 import { requireAdmin } from '@/lib/auth'
+import { loginActivityByApplicant, timeAgo, type LoginActivity } from '@/lib/activity'
 import {
   type Queue, QUEUE_LABELS, QUEUE_ORDER, BLOCKER_LABELS, STAGE_LABELS,
-  emptyTracker, normalizePosition, queuesFor, currentStage, ageAtCurrentStage,
+  emptyTracker, normalizePosition, queuesFor, currentStage, ageAtCurrentStage, applyAutoStages,
 } from '@/lib/onboarding'
 
 export const dynamic = 'force-dynamic'
@@ -18,23 +23,29 @@ function trackerOf(a: Applicant) {
   return a.onboarding ?? emptyTracker(normalizePosition(ROLE_LABELS[a.role]))
 }
 
+/** Storage tracker overlaid with the two auto-derived stages (sign-in, packet release). */
+function effectiveTracker(a: Applicant, act?: LoginActivity) {
+  return applyAutoStages(trackerOf(a), {
+    signedIn: !!act?.lastSignInAt,
+    signedInAt: act?.lastSignInAt ?? undefined,
+    packetReleased: isPacketReleased(a.status),
+  })
+}
+
 export default async function AdminDashboard() {
-  await requireAdmin()
+  const admin = await requireAdmin()
   const applicants = await listApplicants()
+  const activity = await loginActivityByApplicant()
 
   // Operational queue counts (a candidate can appear in several).
   const queueCounts = {} as Record<Queue, number>
   for (const q of QUEUE_ORDER) queueCounts[q] = 0
-  for (const a of applicants) for (const q of queuesFor(trackerOf(a))) queueCounts[q]++
+  for (const a of applicants) for (const q of queuesFor(effectiveTracker(a, activity.get(a.id)))) queueCounts[q]++
 
   return (
     <main className="min-h-screen bg-blue-50">
       <BrandHeader subtitle="Onboarding Command Center" href="/admin"
-        right={
-          <form action="/auth/signout" method="post">
-            <button type="submit" className="font-semibold text-white/80 hover:text-white">Sign out</button>
-          </form>
-        } />
+        right={<UserBadge email={admin.email ?? null} role="admin" />} />
       <div className="mx-auto max-w-6xl px-4 py-10">
         <header className="mb-6">
           <h1 className="text-2xl font-black text-slate-900">CMOP Onboarding Command Center</h1>
@@ -66,12 +77,16 @@ export default async function AdminDashboard() {
                 <th className="px-4 py-3">Blockers</th>
                 <th className="px-4 py-3">Age</th>
                 <th className="px-4 py-3">Packet</th>
+                <th className="px-4 py-3">Last login</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Credential packet</th>
+                <th className="px-4 py-3"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {applicants.map(a => {
-                const t = trackerOf(a)
+                const act = activity.get(a.id)
+                const t = effectiveTracker(a, act)
                 const pct = packetCompleteness(a)
                 const open = totalMissingCount(a)
                 const stage = currentStage(t)
@@ -134,15 +149,31 @@ export default async function AdminDashboard() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
+                      {act?.lastSignInAt
+                        ? <span className="text-xs font-semibold text-slate-600">{timeAgo(act.lastSignInAt)}</span>
+                        : act
+                          ? <span className="text-[11px] font-semibold text-amber-600">Invited &middot; never</span>
+                          : <span className="text-xs text-slate-300">&mdash;</span>}
+                    </td>
+                    <td className="px-4 py-3">
                       <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_PILL[a.status]}`}>
                         {STATUS_LABELS[a.status]}
                       </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <PacketReviewActions applicantId={a.id} status={a.status} downloadable={packetDownloadable(a)} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <ResetPasswordButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} email={a.email} hasAccount={!!act} />
+                        <DeleteCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} />
+                      </div>
                     </td>
                   </tr>
                 )
               })}
               {applicants.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-slate-400">No candidates yet.</td></tr>
+                <tr><td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-400">No candidates yet.</td></tr>
               )}
             </tbody>
           </table>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CMOP Onboarding — Guided Tour</title>
+<style>
+  :root {
+    --navy: #0b243c;
+    --teal: #2d6d8e;
+    --orange: #f18027;
+    --orange-dark: #d96a14;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: radial-gradient(1200px 800px at 50% -10%, #14324f 0%, var(--navy) 55%, #061523 100%);
+    color: #fff;
+    min-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .stage {
+    width: 100%;
+    max-width: 1080px;
+  }
+  .titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+  }
+  .titlebar h1 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+  }
+  .titlebar .badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--orange);
+    border: 1px solid rgba(241,128,39,0.4);
+    border-radius: 999px;
+    padding: 4px 12px;
+  }
+  .frame {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    aspect-ratio: 1440 / 900;
+  }
+  .slide {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.7s ease;
+  }
+  .slide.active { opacity: 1; }
+  .slide img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    transform: scale(1.0);
+  }
+  .slide.active img {
+    animation: kenburns 6s ease-out forwards;
+  }
+  @keyframes kenburns {
+    from { transform: scale(1.0); }
+    to   { transform: scale(1.06); }
+  }
+  .caption {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 60px 32px 26px;
+    background: linear-gradient(to top, rgba(6,21,35,0.92) 0%, rgba(6,21,35,0.7) 45%, rgba(6,21,35,0) 100%);
+    transform: translateY(8px);
+    opacity: 0;
+    transition: opacity 0.5s ease 0.2s, transform 0.5s ease 0.2s;
+  }
+  .slide.active .caption { opacity: 1; transform: translateY(0); }
+  .caption .step {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 8px;
+  }
+  .caption h2 {
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    line-height: 1.15;
+  }
+  .caption p {
+    font-size: 15px;
+    color: rgba(255,255,255,0.82);
+    max-width: 760px;
+    line-height: 1.5;
+  }
+  .progress {
+    display: flex;
+    gap: 6px;
+    margin-top: 16px;
+  }
+  .progress .seg {
+    flex: 1;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.16);
+    overflow: hidden;
+  }
+  .progress .seg i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--orange);
+  }
+  .progress .seg.done i { width: 100%; }
+  .progress .seg.active i { animation: fill var(--dur, 6s) linear forwards; }
+  @keyframes fill { from { width: 0; } to { width: 100%; } }
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  button {
+    font: inherit;
+    color: #fff;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  button:hover { background: rgba(255,255,255,0.16); }
+  button.primary {
+    background: var(--orange);
+    border-color: var(--orange);
+  }
+  button.primary:hover { background: var(--orange-dark); border-color: var(--orange-dark); }
+  .hint {
+    text-align: center;
+    margin-top: 12px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.45);
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="titlebar">
+      <h1>CMOP Onboarding Command Center — Guided Tour</h1>
+      <span class="badge">Demo</span>
+    </div>
+
+    <div class="frame" id="frame"></div>
+
+    <div class="progress" id="progress"></div>
+
+    <div class="controls">
+      <button id="prev">‹ Back</button>
+      <button id="play" class="primary">Pause</button>
+      <button id="next">Next ›</button>
+      <button id="restart">↻ Restart</button>
+    </div>
+    <p class="hint">Auto-playing tour built from live screenshots of the application. Use the controls to step through at your own pace.</p>
+  </div>
+
+<script>
+  const SCENES = [
+    {
+      img: 'demo/01-login.png',
+      step: 'Step 1 · Sign in',
+      title: 'Coordinator sign in',
+      text: 'Every coordinator gets a secure email + password account. No open registration — access is invite-only.',
+      dur: 4500,
+    },
+    {
+      img: 'demo/02-login-filled.png',
+      step: 'Step 1 · Sign in',
+      title: 'One account, one console',
+      text: 'Sign in lands the coordinator straight into the Command Center for their candidates.',
+      dur: 4000,
+    },
+    {
+      img: 'demo/03-admin-dashboard.png',
+      step: 'Step 2 · Command Center',
+      title: 'Every candidate at a glance',
+      text: 'Onboarding stage, blockers, packet readiness — sorted worst-first. The header badge shows who is signed in, with a Last Login column and a Credential Packet column for review and download.',
+      dur: 7500,
+    },
+    {
+      img: 'demo/04-invite-form.png',
+      step: 'Step 3 · Invite',
+      title: 'Invite a candidate in seconds',
+      text: 'Name, email, role, station. The candidate is automatically emailed a secure link to set a password and start their packet — no codes to copy or share.',
+      dur: 7000,
+    },
+    {
+      img: 'demo/05-applicant-detail.png',
+      step: 'Step 4 · Drill in',
+      title: 'The full picture per candidate',
+      text: 'Onboarding pipeline, every required VA form, last login activity, and completeness — all on one page. Once a packet hits 100%, the coordinator marks it Reviewed to unlock the full credential-packet PDF download.',
+      dur: 7500,
+    },
+    {
+      img: 'demo/06-candidate-portal.png',
+      step: 'Step 5 · Candidate view',
+      title: 'What the candidate sees',
+      text: 'Their own packet, a live completeness meter, and exactly what is still missing before it goes to VA.',
+      dur: 6500,
+    },
+    {
+      img: 'demo/07-questionnaire.png',
+      step: 'Step 6 · Guided forms',
+      title: 'Guided questionnaire fills every form',
+      text: 'A step-by-step walkthrough collects answers once and generates each real VA form, pre-filled — ready to review, print, sign, and upload.',
+      dur: 7000,
+    },
+  ]
+
+  const frame = document.getElementById('frame')
+  const progress = document.getElementById('progress')
+  const playBtn = document.getElementById('play')
+
+  // Build slides + progress segments
+  SCENES.forEach((s, i) => {
+    const slide = document.createElement('div')
+    slide.className = 'slide'
+    slide.dataset.i = i
+    slide.innerHTML = `
+      <img src="${s.img}" alt="">
+      <div class="caption">
+        <div class="step">${s.step}</div>
+        <h2>${s.title}</h2>
+        <p>${s.text}</p>
+      </div>`
+    frame.appendChild(slide)
+
+    const seg = document.createElement('div')
+    seg.className = 'seg'
+    seg.innerHTML = '<i></i>'
+    progress.appendChild(seg)
+  })
+
+  const slides = [...frame.querySelectorAll('.slide')]
+  const segs = [...progress.querySelectorAll('.seg')]
+  let cur = 0
+  let playing = true
+  let timer = null
+
+  function clearProgress() {
+    segs.forEach(seg => { seg.classList.remove('active', 'done'); const i = seg.querySelector('i'); i.style.animation = 'none'; void i.offsetWidth; i.style.animation = '' })
+  }
+
+  function show(i) {
+    cur = (i + SCENES.length) % SCENES.length
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur))
+    clearProgress()
+    segs.forEach((seg, k) => {
+      if (k < cur) seg.classList.add('done')
+      else if (k === cur) {
+        seg.style.setProperty('--dur', SCENES[cur].dur + 'ms')
+        if (playing) seg.classList.add('active')
+      }
+    })
+    schedule()
+  }
+
+  function schedule() {
+    clearTimeout(timer)
+    if (!playing) return
+    timer = setTimeout(() => show(cur + 1), SCENES[cur].dur)
+  }
+
+  function setPlaying(p) {
+    playing = p
+    playBtn.textContent = p ? 'Pause' : 'Play'
+    if (p) { segs[cur].style.setProperty('--dur', SCENES[cur].dur + 'ms'); segs[cur].classList.add('active'); schedule() }
+    else { clearTimeout(timer); const i = segs[cur].querySelector('i'); const w = getComputedStyle(i).width; i.style.animation = 'none'; i.style.width = w }
+  }
+
+  document.getElementById('next').onclick = () => show(cur + 1)
+  document.getElementById('prev').onclick = () => show(cur - 1)
+  document.getElementById('restart').onclick = () => { setPlaying(true); show(0) }
+  playBtn.onclick = () => setPlaying(!playing)
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight') show(cur + 1)
+    else if (e.key === 'ArrowLeft') show(cur - 1)
+    else if (e.key === ' ') { e.preventDefault(); setPlaying(!playing) }
+  })
+
+  show(0)
+</script>
+</body>
+</html>

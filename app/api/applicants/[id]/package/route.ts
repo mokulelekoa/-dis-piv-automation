@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server'
 import { PDFDocument } from 'pdf-lib'
-import { getApplicant, getFormBytes, packetDownloadable, specLabel } from '@/lib/store'
+import { getApplicant, getFormBytes, packetReleasable, specLabel } from '@/lib/store'
 import { canAccessApplicant } from '@/lib/auth'
 
 /**
  * GET /api/applicants/[id]/package — merges every stored form PDF into one
- * combined review packet for the admin to download. 409 unless the packet is
- * fully uploaded, 100%, and issue-free (see packetDownloadable).
+ * combined credential packet to download. 409 unless the packet is complete AND
+ * an admin has marked it reviewed (see packetReleasable) — completion alone does
+ * not unlock the download.
  */
 export async function GET(
   _request: NextRequest,
@@ -18,8 +19,8 @@ export async function GET(
   }
   const applicant = await getApplicant(id)
   if (!applicant) return new Response(null, { status: 404 })
-  if (!packetDownloadable(applicant)) {
-    return Response.json({ error: 'Packet is not complete' }, { status: 409 })
+  if (!packetReleasable(applicant)) {
+    return Response.json({ error: 'Packet is not reviewed and released yet' }, { status: 409 })
   }
 
   try {

@@ -38,6 +38,9 @@ yarn-error.log*
 /.data/
 dev.log
 
+# QA verification harness build output (compiled lib + synthetic test PDFs)
+/.qa-build/
+
 # vercel
 .vercel
 

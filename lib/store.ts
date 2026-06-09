@@ -21,6 +21,7 @@ export type PacketStatus =
   | 'DRAFT'
   | 'IN_PROGRESS'
   | 'READY_FOR_REVIEW'
+  | 'REVIEWED'
   | 'SUBMITTED'
   | 'REJECTED'
   | 'ACCEPTED'
@@ -485,6 +486,54 @@ export function totalMissingCount(a: Applicant): number {
 export function packetDownloadable(a: Applicant): boolean {
   return a.forms.length > 0
     && a.forms.every(f => f.uploaded && f.stored && f.completeness === 100 && f.issues.length === 0)
+}
+
+/** Statuses at or past an admin's sign-off — the only point a packet may be downloaded. */
+const RELEASABLE_STATUSES: PacketStatus[] = ['REVIEWED', 'SUBMITTED', 'ACCEPTED']
+
+/**
+ * True only when the packet is complete AND an admin has marked it reviewed.
+ * Completion alone is not enough — the merged credential packet is gated behind
+ * an explicit human review.
+ */
+export function packetReleasable(a: Applicant): boolean {
+  return packetDownloadable(a) && RELEASABLE_STATUSES.includes(a.status)
+}
+
+/**
+ * Admin sign-off: move a complete, ready-for-review packet to REVIEWED, which
+ * unlocks the merged-packet download. No-op (status unchanged) if the packet
+ * isn't complete or isn't awaiting review, so the caller can detect ineligibility.
+ */
+export async function markReviewed(applicantId: string): Promise<Applicant | null> {
+  return patch(applicantId, a => {
+    if (packetDownloadable(a) && a.status === 'READY_FOR_REVIEW') {
+      a.status = 'REVIEWED'
+    }
+  })
+}
+
+/**
+ * Permanently delete a candidate: their uploaded form PDFs and profile photo in
+ * Storage, then the applicants row. Returns true if a row was actually removed
+ * (false if the id didn't exist). The linked auth account is removed separately
+ * by the caller (see deleteAuthUserForApplicant) so the email frees up for re-invite.
+ */
+export async function deleteApplicant(id: string): Promise<boolean> {
+  if (!UUID_RE.test(id)) return false
+  const sb = supabase()
+
+  // Clear Storage objects under the applicant's prefix in each bucket.
+  for (const bucket of [FORMS_BUCKET, PHOTOS_BUCKET]) {
+    const { data: files } = await sb.storage.from(bucket).list(id)
+    if (files && files.length) {
+      await sb.storage.from(bucket).remove(files.map(f => `${id}/${f.name}`))
+    }
+  }
+
+  const { error, count } = await sb.from(TABLE).delete({ count: 'exact' }).eq('id', id)
+  if (error) throw new Error(`store delete failed: ${error.message}`)
+  return (count ?? 0) > 0
 }
 
 export function specLabel(specId: string): string {

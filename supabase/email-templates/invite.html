@@ -1,0 +1,145 @@
+<!--
+  Supabase "Invite user" email template for DIS CMOP onboarding.
+  Paste the markup below into: Supabase Dashboard → Authentication → Emails →
+  "Invite user" → Message body (HTML). Subject suggestion:
+      You're invited to DIS CMOP Onboarding
+
+  Template variables (Go text/template, provided by Supabase):
+    {{ .RedirectTo }}       the redirectTo we passed: <origin>/auth/callback?next=/reset-password
+    {{ .TokenHash }}        one-time OTP hash — we append it to RedirectTo (below)
+    {{ .Data.first_name }}  candidate's first name (admins have none)
+    {{ .Data.role }}        "candidate" | "admin" (set in app/api/admin/invites/route.ts)
+    {{ .SiteURL }}          project Site URL (used for the logo asset)
+
+  IMPORTANT: do NOT use {{ .ConfirmationURL }} for the button. Invites are
+  generated server-side, so the PKCE code link it produces has no browser-side
+  code-verifier cookie and fails at /auth/callback ("link invalid or expired").
+  Instead we append token_hash+type to {{ .RedirectTo }}, giving
+  <origin>/auth/callback?next=/reset-password&token_hash=…&type=invite, which the
+  callback verifies with verifyOtp (no verifier needed). Using .RedirectTo (not
+  .SiteURL) keeps the link on whatever origin sent the invite — localhost in dev,
+  prod in prod. REQUIRES the sending origin (e.g. http://localhost:3000/**) to be
+  in Supabase → Authentication → URL Configuration → Redirect URLs, otherwise
+  RedirectTo falls back to Site URL.
+
+  Email-safe: table layout + inline styles, 600px card, bulletproof button
+  (with VML fallback for Outlook). Looks correct even if remote images are blocked.
+-->
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>You're invited</title>
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  <style>
+    @media only screen and (max-width:600px){
+      .container{width:100% !important;}
+      .px{padding-left:24px !important;padding-right:24px !important;}
+    }
+    a{text-decoration:none;}
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f4f9;">
+  <div style="display:none;font-size:1px;color:#f0f4f9;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+    Set your password and get started with DIS CMOP onboarding.
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f4f9;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 8px rgba(11,36,60,0.08);">
+
+          <!-- Brand header -->
+          <tr>
+            <td style="background-color:#0b243c;padding:28px 40px;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <img src="{{ .SiteURL }}/dis-logo.png" width="36" height="36" alt="" style="display:block;border:0;outline:none;">
+                  </td>
+                  <td style="vertical-align:middle;padding-left:12px;">
+                    <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;letter-spacing:1.5px;color:#ffffff;text-transform:uppercase;">Dynamic Integrated Services</div>
+                    <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:1px;color:#7fb0c4;text-transform:uppercase;">CMOP Onboarding</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Accent rule -->
+          <tr><td style="height:4px;background-color:#f18027;font-size:0;line-height:0;">&nbsp;</td></tr>
+
+          <!-- Body -->
+          <tr>
+            <td class="px" style="padding:40px;">
+              <h1 style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:24px;line-height:1.25;font-weight:800;color:#0b243c;">
+                You're invited to CMOP onboarding
+              </h1>
+
+              <p style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#475569;">
+                {{ if .Data.first_name }}Hi {{ .Data.first_name }},{{ else }}Hello,{{ end }}
+              </p>
+
+              <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#475569;">
+                {{ if eq .Data.role "admin" }}
+                  A coordinator has invited you to join the <strong>DIS CMOP Onboarding Command Center</strong> as a teammate. Set your password to access the console and help move candidates through their VA onboarding.
+                {{ else }}
+                  You've been invited to begin your VA onboarding with <strong>Dynamic Integrated Services</strong>. Set your password and we'll guide you through your CMOP packet one step at a time.
+                {{ end }}
+              </p>
+
+              <!-- Bulletproof CTA button -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+                <tr>
+                  <td align="center" bgcolor="#f18027" style="border-radius:12px;">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=invite" style="height:48px;v-text-anchor:middle;width:240px;" arcsize="25%" stroke="f" fillcolor="#f18027">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Accept invitation</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
+                    <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=invite" style="display:inline-block;padding:14px 32px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#ffffff;background-color:#f18027;border-radius:12px;">
+                      Accept invitation &amp; set password
+                    </a>
+                    <!--<![endif]-->
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#94a3b8;">
+                Or paste this link into your browser:
+              </p>
+              <p style="margin:0 0 24px;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#2d6d8e;word-break:break-all;">
+                <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=invite" style="color:#2d6d8e;text-decoration:underline;">{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=invite</a>
+              </p>
+
+              <hr style="border:none;border-top:1px solid #e4e9ec;margin:0 0 20px;">
+
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#94a3b8;">
+                This invitation link is single-use and expires for your security. If you weren't expecting this invite, you can safely ignore this email &mdash; no account is created until you set a password.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color:#f7fbff;padding:24px 40px;border-top:1px solid #e4e9ec;">
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.6;color:#94a3b8;">
+                Dynamic Integrated Services &middot; VA Consolidated Mail Outpatient Pharmacy (CMOP) onboarding<br>
+                This is an automated message from the CMOP onboarding system.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

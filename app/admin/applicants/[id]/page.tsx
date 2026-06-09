@@ -1,33 +1,45 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ArrowLeft, Mail, Hash, Download, PackageCheck } from 'lucide-react'
+import { ArrowLeft, Mail, Hash, PackageCheck, Clock } from 'lucide-react'
 import { getApplicant, packetCompleteness, totalMissingCount, packetDownloadable } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
-import { emptyTracker, normalizePosition } from '@/lib/onboarding'
-import { STATUS_LABELS, STATUS_PILL } from '@/app/components/status'
+import { emptyTracker, normalizePosition, applyAutoStages } from '@/lib/onboarding'
+import { STATUS_LABELS, STATUS_PILL, isPacketReleased } from '@/app/components/status'
 import PacketForms from '@/app/components/PacketForms'
 import OnboardingTimeline from '@/app/components/OnboardingTimeline'
 import Avatar from '@/app/components/Avatar'
 import BrandHeader from '@/app/components/BrandHeader'
+import UserBadge from '@/app/components/UserBadge'
+import PacketReviewActions from '@/app/components/PacketReviewActions'
 import { requireAdmin } from '@/lib/auth'
+import { loginActivityForApplicant, timeAgo } from '@/lib/activity'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export default async function ApplicantDetail({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin()
+  const admin = await requireAdmin()
   const { id } = await params
   const applicant = await getApplicant(id)
   if (!applicant) notFound()
 
   const pct = packetCompleteness(applicant)
   const open = totalMissingCount(applicant)
-  const tracker = applicant.onboarding ?? emptyTracker(normalizePosition(ROLE_LABELS[applicant.role]))
   const packetReady = packetDownloadable(applicant)
+  const act = await loginActivityForApplicant(id)
+  const tracker = applyAutoStages(
+    applicant.onboarding ?? emptyTracker(normalizePosition(ROLE_LABELS[applicant.role])),
+    {
+      signedIn: !!act?.lastSignInAt,
+      signedInAt: act?.lastSignInAt ?? undefined,
+      packetReleased: isPacketReleased(applicant.status),
+    },
+  )
 
   return (
     <main className="min-h-screen bg-blue-50">
-      <BrandHeader subtitle="Onboarding Command Center" href="/admin" />
+      <BrandHeader subtitle="Onboarding Command Center" href="/admin"
+        right={<UserBadge email={admin.email ?? null} role="admin" />} />
       <div className="mx-auto max-w-3xl px-4 py-10">
         <Link href="/admin" className="mb-5 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-700">
           <ArrowLeft size={14} /> All candidates
@@ -44,6 +56,12 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
                 <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
                   {applicant.email && <span className="inline-flex items-center gap-1"><Mail size={11} /> {applicant.email}</span>}
                   <span className="inline-flex items-center gap-1"><Hash size={11} /> Station {applicant.station}</span>
+                  <span className="inline-flex items-center gap-1">
+                    <Clock size={11} />
+                    {act?.lastSignInAt
+                      ? `Last login ${timeAgo(act.lastSignInAt)}`
+                      : act ? 'Invited · never signed in' : 'No account yet'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -64,26 +82,30 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
         </header>
 
         <div className="mb-6">
-          <OnboardingTimeline tracker={tracker} />
+          <OnboardingTimeline tracker={tracker} applicantId={applicant.id} editable />
         </div>
 
-        {packetReady && (
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-green-200 bg-green-50 p-5">
-            <div className="flex items-start gap-3">
-              <PackageCheck size={22} className="mt-0.5 flex-shrink-0 text-green-600" />
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Application package ready</h2>
-                <p className="mt-0.5 text-xs text-slate-600">All required forms are uploaded and complete. Download the merged packet for review.</p>
+        {packetReady && (() => {
+          const reviewed = applicant.status === 'REVIEWED' || applicant.status === 'SUBMITTED' || applicant.status === 'ACCEPTED'
+          return (
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-green-200 bg-green-50 p-5">
+              <div className="flex items-start gap-3">
+                <PackageCheck size={22} className="mt-0.5 flex-shrink-0 text-green-600" />
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">
+                    {reviewed ? 'Credential packet released' : 'Application package ready for your review'}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-slate-600">
+                    {reviewed
+                      ? 'All forms are complete and signed. Download the merged credential packet.'
+                      : 'All required forms are uploaded, complete, and signed. Mark it reviewed to unlock the merged-packet download.'}
+                  </p>
+                </div>
               </div>
+              <PacketReviewActions applicantId={applicant.id} status={applicant.status} downloadable size="lg" />
             </div>
-            <a
-              href={`/api/applicants/${applicant.id}/package`}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-accent-600"
-            >
-              <Download size={16} /> Download package
-            </a>
-          </div>
-        )}
+          )
+        })()}
 
         <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-slate-400">Required forms</h2>
         <PacketForms applicant={applicant} />

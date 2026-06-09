@@ -84,11 +84,17 @@ export const MARITAL_OPTIONS = [
   'Annulled', 'Interlocutory Decree',
 ] as const
 
+/** Active-duty branches of the U.S. Armed Forces (OF-306 Q8 military service). */
+export const MILITARY_BRANCH_OPTIONS = [
+  'Army', 'Navy', 'Air Force', 'Marine Corps', 'Coast Guard', 'Space Force',
+] as const
+
+// Verbatim from the VA "Self Certification of Continuous Service" form.
 export const BREAK_IN_SERVICE_OPTIONS: { value: BreakInService; label: string }[] = [
-  { value: 'none', label: 'I have NOT had a break in service' },
-  { value: 'lt36', label: 'My break in service was less than 36 months' },
-  { value: '36to60', label: 'My break in service is greater than 36 months, but less than 60 months' },
-  { value: 'gt60', label: 'My break in service is greater than 60 months, or I have never worked for the Federal government' },
+  { value: 'none', label: 'I have NOT had a break in service.' },
+  { value: 'lt36', label: 'My break in service is less than 36 months.' },
+  { value: '36to60', label: 'My break in service is greater than 36 months, but less than 60 months.' },
+  { value: 'gt60', label: 'My break in service is greater than 60 months; or I have never had federal employment as defined above.' },
 ]
 
 /** The five OF-306 declarations that, if any is "Yes", require a written explanation. */

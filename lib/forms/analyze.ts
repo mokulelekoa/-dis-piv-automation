@@ -8,7 +8,7 @@
  */
 
 import { PDFDocument, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown } from 'pdf-lib'
-import { getSpec, type FormSpec } from './specs'
+import { getSpec } from './specs'
 
 export type ItemStatus = 'ok' | 'missing' | 'review'
 
@@ -156,8 +156,9 @@ export async function analyzePdf(specId: string, pdfBytes: Uint8Array): Promise<
     }
   }
 
-  // Exactly-one checkbox groups
+  // Exactly-one checkbox groups (respecting conditionals)
   for (const grp of spec.oneOf) {
+    if (grp.conditionalOn && !conditionMet(map, grp.conditionalOn)) continue
     requiredTotal++
     const n = checkedCount(map, grp.fields)
     if (n === 1) {
@@ -172,20 +173,31 @@ export async function analyzePdf(specId: string, pdfBytes: Uint8Array): Promise<
     }
   }
 
-  // Every radio (Yes/No question) answered — OF-306
+  // Required radios (Yes/No questions) answered — OF-306. Optional groups (18b/18c)
+  // and conditionally-required groups (Selective Service, only for the "Male"
+  // declaration) are excluded so a correctly-completed packet isn't flagged.
   if (spec.allRadiosAnswered && radioGroups.length > 0) {
-    const unanswered = radioGroups.filter(name => {
+    const required = radioGroups.filter(name => {
+      if (spec.optionalRadios?.includes(name)) return false
+      const cond = spec.conditionalRadios?.find(c => c.field === name)
+      if (cond) {
+        const v = map.get(cond.when.field)
+        if (!(v?.type === 'radio' && v.selected === cond.when.value)) return false
+      }
+      return true
+    })
+    const unanswered = required.filter(name => {
       const v = map.get(name)
       return !(v?.type === 'radio' && v.selected !== undefined)
     })
     requiredTotal++
     if (unanswered.length === 0) {
       requiredOk++
-      items.push({ label: `All ${radioGroups.length} Yes/No questions answered`, status: 'ok' })
+      items.push({ label: `All ${required.length} required Yes/No questions answered`, status: 'ok' })
     } else {
       missing.push(`${unanswered.length} unanswered Yes/No question(s)`)
       items.push({
-        label: `Yes/No questions (${radioGroups.length - unanswered.length}/${radioGroups.length} answered)`,
+        label: `Yes/No questions (${required.length - unanswered.length}/${required.length} answered)`,
         status: 'missing',
         detail: `Unanswered: ${unanswered.slice(0, 8).join(', ')}${unanswered.length > 8 ? '…' : ''}`,
       })

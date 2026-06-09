@@ -12,8 +12,14 @@
 import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 
+let envFile = ''
+try {
+  envFile = readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
+} catch {
+  // No .env.local (e.g. on a deploy host) — rely on real environment variables.
+}
 const env = Object.fromEntries(
-  readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
+  envFile
     .split('\n').filter(l => l && !l.startsWith('#') && l.includes('='))
     .map(l => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim()] }),
 )

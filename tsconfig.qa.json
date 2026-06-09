@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2021",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "outDir": ".qa-build",
+    "rootDir": ".",
+    "noEmit": false,
+    "declaration": false,
+    "resolveJsonModule": true
+  },
+  "files": [
+    "lib/profile.ts",
+    "lib/forms/questions.ts",
+    "lib/forms/specs.ts",
+    "lib/forms/analyze.ts",
+    "lib/forms/fill.ts"
+  ]
+}

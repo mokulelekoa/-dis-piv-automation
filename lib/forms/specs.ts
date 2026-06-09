@@ -10,25 +10,31 @@
 
 export type PacketRole = 'PHARMACIST' | 'PHARMACY_TECHNICIAN' | 'SHIPPER_PACKER'
 
+/**
+ * A predicate evaluated against the uploaded form's actual field values. Every
+ * sub-condition provided must hold: `anyChecked` = at least one of these
+ * checkbox/radio fields is checked; `dropdownEquals` = the named dropdown's
+ * selection equals `value`.
+ */
+export interface FieldCondition {
+  anyChecked?: string[]
+  dropdownEquals?: { field: string; value: string }
+}
+
 export interface OneOfGroup {
   /** Human label for the decision, e.g. "Citizenship status". */
   label: string
   /** AcroForm checkbox field names — exactly one must be checked. */
   fields: string[]
+  /** Only required when this condition holds (e.g. the 3-year question, only for PR/FN). */
+  conditionalOn?: FieldCondition
 }
 
 export interface RequiredText {
   field: string
   label: string
-  /**
-   * Only required when the condition holds. Every sub-condition provided must be
-   * true: `anyChecked` = at least one of these checkbox/radio fields is checked;
-   * `dropdownEquals` = the named dropdown's selection equals `value`.
-   */
-  conditionalOn?: {
-    anyChecked?: string[]
-    dropdownEquals?: { field: string; value: string }
-  }
+  /** Only required when this condition holds. */
+  conditionalOn?: FieldCondition
 }
 
 export interface FormSpec {
@@ -38,8 +44,12 @@ export interface FormSpec {
   templateFile: string
   requiredText: RequiredText[]
   oneOf: OneOfGroup[]
-  /** When true, every radio group in the PDF must have a selection (OF-306). */
+  /** When true, every required radio group in the PDF must have a selection (OF-306). */
   allRadiosAnswered: boolean
+  /** Radio groups that are optional on the form — never counted as missing. */
+  optionalRadios?: string[]
+  /** Radio groups required only when another radio equals a value (e.g. Selective Service only for males). */
+  conditionalRadios?: { field: string; when: { field: string; value: string } }[]
   /** Wet-ink signature required (digital not accepted for these). */
   signatureRequired: boolean
   note?: string
@@ -53,8 +63,10 @@ const BI_FIELDS_BASE = (id: string, label: string, templateFile: string): FormSp
     { field: 'Last Name', label: 'Last name' },
     { field: 'First Name', label: 'First name' },
     { field: 'Middle Name', label: 'Middle name (use "NMN" if none)' },
-    // The VA template's visible SSN box is the misspelled field; the correctly
-    // spelled field is an orphan that never renders/fills, so we check this one.
+    // The BI form has two side-by-side SSN boxes: a 9-cell comb named "Social
+    // Security Number" (maxLength 9, digits only) and a misspelled free-text box
+    // "Social Secuirty Number". fill.ts populates both; we check the free-text
+    // box here since it carries the human-readable, dashed SSN.
     { field: 'Social Secuirty Number', label: 'Social Security Number' },
     { field: 'Date of Birth', label: 'Date of birth' },
     { field: 'City of Birth', label: 'City of birth' },
@@ -68,8 +80,13 @@ const BI_FIELDS_BASE = (id: string, label: string, templateFile: string): FormSp
     { field: 'Email Address', label: 'Email address' },
   ],
   oneOf: [
-    { label: 'Citizenship status (US Citizen / Permanent Resident / Foreign National)', fields: ['D-C', 'PR', 'FN'] },
-    { label: '3-consecutive-years-in-US question (Yes/No)', fields: ['YES', 'No'] },
+    // Citizenship is declared by the required "Country of Citizenship" dropdown
+    // above. The D-C (Dual Citizenship) / PR (Permanent Resident) / FN (Foreign
+    // National) checkboxes are optional special-case flags — a plain U.S.
+    // citizen checks NONE — so they are deliberately NOT an "exactly one" group.
+    // Only PR/FN candidates answer the 3-consecutive-years-in-US question.
+    { label: '3-consecutive-years-in-US question (Yes/No)', fields: ['YES', 'No'],
+      conditionalOn: { anyChecked: ['PR', 'FN'] } },
   ],
   allRadiosAnswered: false,
   signatureRequired: true,
@@ -91,8 +108,17 @@ export const FORM_SPECS: FormSpec[] = [
     ],
     oneOf: [],
     allRadiosAnswered: true,
+    optionalRadios: [
+      'Did you waive Basic Life Insurance or any type of optional life insurance', // 18b — FEGLI, optional
+      'If yes to 18b did you later cancel the waivers',                            // 18c — only relevant if 18b = Yes
+    ],
+    conditionalRadios: [
+      // Selective Service registration applies only to those required to register
+      // (the form's "Male" declaration is Yes); it's N/A for everyone else.
+      { field: 'Have you registered with Selective Service', when: { field: 'Male', value: 'Yes' } },
+    ],
     signatureRequired: true,
-    note: 'Every Yes/No question (incl. Q8, commonly missed) must be answered; 7b/7c are conditional on 7a. Wet signature in black ink required — digital not accepted.',
+    note: 'Every required Yes/No must be answered (incl. Q8, commonly missed). Selective Service is required only when the "Male" declaration is Yes; life-insurance waiver items 18b/18c are optional. Wet signature in black ink required — digital not accepted.',
   },
   BI_FIELDS_BASE('bi_pharmacist', 'BI Request — Pharmacist', 'BI For- Pharmacist.pdf'),
   BI_FIELDS_BASE('bi_pharmtech', 'BI Request — Pharmacy Technician', 'BI Form- PharmacyTechnician.pdf'),
