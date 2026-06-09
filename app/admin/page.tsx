@@ -86,7 +86,7 @@ export default async function AdminDashboard() {
                 <th className="px-4 py-3">Last login</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Credential packet</th>
-                <th className="px-4 py-3"><span className="sr-only">Actions</span></th>
+                <th className="sticky right-0 z-20 border-l border-slate-200 bg-slate-50 px-4 py-3"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -170,7 +170,7 @@ export default async function AdminDashboard() {
                       <PacketReviewActions applicantId={a.id} status={a.status} downloadable={packetDownloadable(a)}
                         candidate={{ firstName: a.firstName, lastName: a.lastName, station: a.station }} />
                     </td>
-                    <td className="relative z-10 px-4 py-3">
+                    <td className="sticky right-0 z-20 border-l border-slate-100 bg-white px-4 py-3 group-hover:bg-slate-50">
                       <div className="flex items-center justify-end gap-1">
                         <ResetPasswordButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} email={a.email} hasAccount={!!act} />
                         <ArchiveCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} archived={false} />
