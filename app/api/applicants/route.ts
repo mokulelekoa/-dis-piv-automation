@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server'
 import { listApplicants, createApplicant } from '@/lib/store'
 import { ROLE_LABELS, type PacketRole } from '@/lib/forms/specs'
-import { isAdminRequest } from '@/lib/auth'
+import { isStaffRequest } from '@/lib/auth'
 
 export async function GET() {
-  if (!(await isAdminRequest())) {
+  if (!(await isStaffRequest())) {
     return Response.json({ error: 'Not authorized.' }, { status: 403 })
   }
   const applicants = await listApplicants()
@@ -12,7 +12,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await isAdminRequest())) {
+  if (!(await isStaffRequest())) {
     return Response.json({ error: 'Not authorized.' }, { status: 403 })
   }
   try {

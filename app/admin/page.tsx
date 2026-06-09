@@ -10,7 +10,7 @@ import PacketReviewActions from '@/app/components/PacketReviewActions'
 import DeleteCandidateButton from '@/app/components/DeleteCandidateButton'
 import ResetPasswordButton from '@/app/components/ResetPasswordButton'
 import ArchiveCandidateButton from '@/app/components/ArchiveCandidateButton'
-import { requireAdmin } from '@/lib/auth'
+import { requireStaff, roleOf } from '@/lib/auth'
 import { loginActivityByApplicant, timeAgo, type LoginActivity } from '@/lib/activity'
 import {
   type Queue, QUEUE_LABELS, QUEUE_ORDER, BLOCKER_LABELS, STAGE_LABELS,
@@ -34,7 +34,9 @@ function effectiveTracker(a: Applicant, act?: LoginActivity) {
 }
 
 export default async function AdminDashboard() {
-  const admin = await requireAdmin()
+  const me = await requireStaff()
+  const role = roleOf(me)
+  const isAdmin = role === 'admin'
   const allApplicants = await listApplicants()
   const activity = await loginActivityByApplicant()
 
@@ -51,7 +53,7 @@ export default async function AdminDashboard() {
   return (
     <main className="min-h-screen bg-blue-50">
       <BrandHeader subtitle="Onboarding Command Center" href="/admin"
-        right={<UserBadge email={admin.email ?? null} role="admin" />} />
+        right={<UserBadge email={me.email ?? null} role={role ?? 'coordinator'} />} />
       <div className="mx-auto max-w-6xl px-4 py-10">
         <header className="mb-6">
           <h1 className="text-2xl font-black text-slate-900">CMOP Onboarding Command Center</h1>
@@ -63,7 +65,7 @@ export default async function AdminDashboard() {
 
         {/* Invite candidates and teammates — the only way new accounts are created. */}
         <div className="mb-6">
-          <InvitePanel roles={Object.entries(ROLE_LABELS)} />
+          <InvitePanel roles={Object.entries(ROLE_LABELS)} canInviteTeammates={isAdmin} />
         </div>
 
         {/* Operational queues */}
@@ -174,7 +176,7 @@ export default async function AdminDashboard() {
                       <div className="flex items-center justify-end gap-1">
                         <ResetPasswordButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} email={a.email} hasAccount={!!act} />
                         <ArchiveCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} archived={false} />
-                        <DeleteCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} />
+                        {isAdmin && <DeleteCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} />}
                       </div>
                     </td>
                   </tr>
@@ -212,7 +214,7 @@ export default async function AdminDashboard() {
                     </div>
                     <div className="flex items-center gap-1">
                       <ArchiveCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} archived={true} />
-                      <DeleteCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} />
+                      {isAdmin && <DeleteCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} />}
                     </div>
                   </li>
                 ))}

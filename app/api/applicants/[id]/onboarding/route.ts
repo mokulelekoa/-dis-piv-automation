@@ -1,5 +1,5 @@
 import { getApplicant, saveOnboarding } from '@/lib/store'
-import { isAdminRequest } from '@/lib/auth'
+import { isStaffRequest } from '@/lib/auth'
 import {
   MANUAL_STAGES, STAGE_ORDER, STAGE_STATUS_LABELS, emptyTracker, normalizePosition,
   type StageKey, type StageStatus, type StageState, type OnboardingTracker,
@@ -8,7 +8,7 @@ import { ROLE_LABELS } from '@/lib/forms/specs'
 
 /**
  * PUT /api/applicants/[id]/onboarding — coordinator records one manual pipeline
- * milestone (fingerprinting / training / PIV pickup / start date). Admin-only:
+ * milestone (fingerprinting / training / PIV pickup / start date). Staff-only:
  * candidates never set their own onboarding stages. The two auto-derived stages
  * (offer_accepted, package_sent) are computed live from sign-in + packet status
  * and are rejected here so they can't be hand-overridden into a drifting state.
@@ -18,7 +18,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  if (!(await isAdminRequest())) {
+  if (!(await isStaffRequest())) {
     return Response.json({ error: 'Not authorized.' }, { status: 403 })
   }
 

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import type { EmailOtpType } from '@supabase/supabase-js'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { roleOf, applicantIdOf } from '@/lib/auth'
+import { roleOf, applicantIdOf, isStaff } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   if (next) return Response.redirect(new URL(next, origin), 303)
 
   const { data: { user } } = await supabase.auth.getUser()
-  if (roleOf(user) === 'admin') return Response.redirect(new URL('/admin', origin), 303)
+  if (isStaff(user)) return Response.redirect(new URL('/admin', origin), 303)
   const applicantId = applicantIdOf(user)
   if (roleOf(user) === 'candidate' && applicantId) {
     return Response.redirect(new URL(`/applicant/${applicantId}`, origin), 303)

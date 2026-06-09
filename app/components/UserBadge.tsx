@@ -22,7 +22,7 @@ export default function UserBadge({
   email: string | null; role: AppRole; name?: string
 }) {
   const label = name || email || 'Account'
-  const roleLabel = role === 'admin' ? 'Administrator' : 'Candidate'
+  const roleLabel = role === 'admin' ? 'Administrator' : role === 'coordinator' ? 'Coordinator' : 'Candidate'
 
   return (
     <div className="flex items-center gap-2.5">

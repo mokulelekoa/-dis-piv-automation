@@ -88,7 +88,7 @@ export default function Welcome() {
       }
       const role = user.app_metadata?.role
       const applicantId = user.app_metadata?.applicant_id
-      const admin = role === 'admin'
+      const admin = role === 'admin' || role === 'coordinator'
       const destination = admin
         ? '/admin'
         : role === 'candidate' && typeof applicantId === 'string'

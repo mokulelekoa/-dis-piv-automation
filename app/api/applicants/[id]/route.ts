@@ -1,5 +1,5 @@
 import { getApplicant, markReviewed, deleteApplicant, setArchived } from '@/lib/store'
-import { canAccessApplicant, isAdminRequest } from '@/lib/auth'
+import { canAccessApplicant, isAdminRequest, isStaffRequest } from '@/lib/auth'
 import { deleteAuthUserForApplicant, setAuthUserBannedForApplicant } from '@/lib/activity'
 import { supabase } from '@/lib/supabase'
 
@@ -30,7 +30,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params
-  if (!(await isAdminRequest())) {
+  if (!(await isStaffRequest())) {
     return Response.json({ error: 'Not authorized.' }, { status: 403 })
   }
 

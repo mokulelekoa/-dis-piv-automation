@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { UserPlus, ShieldPlus, Loader2, MailCheck, X } from 'lucide-react'
 
-type Kind = 'candidate' | 'admin'
+type Kind = 'candidate' | 'teammate'
+type AccessLevel = 'coordinator' | 'admin'
 
 interface InviteResult {
   emailed: boolean
@@ -12,8 +13,16 @@ interface InviteResult {
   applicantId?: string
 }
 
-/** Admin-side invite minting. Candidates and teammates can only join via a code. */
-export default function InvitePanel({ roles }: { roles: [string, string][] }) {
+/**
+ * Admin-side invite minting. Candidates and teammates can only join via a code.
+ * Only full admins may invite teammates (`canInviteTeammates`); coordinators see
+ * the candidate invite only.
+ */
+export default function InvitePanel({
+  roles, canInviteTeammates,
+}: {
+  roles: [string, string][]; canInviteTeammates: boolean
+}) {
   const [kind, setKind] = useState<Kind | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -25,6 +34,8 @@ export default function InvitePanel({ roles }: { roles: [string, string][] }) {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState(roles[0]?.[0] ?? '')
   const [station, setStation] = useState('')
+  // Teammate field — defaults to the least-privilege tier.
+  const [accessLevel, setAccessLevel] = useState<AccessLevel>('coordinator')
 
   function reset() {
     setKind(null)
@@ -35,6 +46,7 @@ export default function InvitePanel({ roles }: { roles: [string, string][] }) {
     setEmail('')
     setRole(roles[0]?.[0] ?? '')
     setStation('')
+    setAccessLevel('coordinator')
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -54,8 +66,8 @@ export default function InvitePanel({ roles }: { roles: [string, string][] }) {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(
-          kind === 'admin'
-            ? { kind, email }
+          kind === 'teammate'
+            ? { kind, email, accessLevel }
             : { kind, email, firstName, lastName, role, station },
         ),
       })
@@ -84,9 +96,9 @@ export default function InvitePanel({ roles }: { roles: [string, string][] }) {
                 Invitation emailed to {result.email}
               </h3>
               <p className="mt-0.5 text-xs text-slate-500">
-                {result.role === 'admin'
-                  ? 'They’ll get a link to set a password and join as a teammate.'
-                  : 'They’ll get a link to set a password, then drop into their onboarding packet.'}
+                {result.role === 'candidate'
+                  ? 'They’ll get a link to set a password, then drop into their onboarding packet.'
+                  : 'They’ll get a link to set a password and join as a teammate.'}
               </p>
             </div>
           </div>
@@ -115,12 +127,14 @@ export default function InvitePanel({ roles }: { roles: [string, string][] }) {
         >
           <UserPlus size={16} /> Invite candidate
         </button>
-        <button
-          onClick={() => setKind('admin')}
-          className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-dis-navy transition hover:bg-slate-50"
-        >
-          <ShieldPlus size={16} /> Invite teammate
-        </button>
+        {canInviteTeammates && (
+          <button
+            onClick={() => setKind('teammate')}
+            className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-dis-navy transition hover:bg-slate-50"
+          >
+            <ShieldPlus size={16} /> Invite teammate
+          </button>
+        )}
       </div>
     )
   }
@@ -130,7 +144,7 @@ export default function InvitePanel({ roles }: { roles: [string, string][] }) {
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-black text-dis-navy">
-          {kind === 'candidate' ? 'Invite a candidate' : 'Invite a teammate (admin)'}
+          {kind === 'candidate' ? 'Invite a candidate' : 'Invite a teammate'}
         </h3>
         <button onClick={reset} className="text-slate-400 hover:text-slate-600" aria-label="Cancel">
           <X size={18} />
@@ -172,6 +186,19 @@ export default function InvitePanel({ roles }: { roles: [string, string][] }) {
               <input value={station} onChange={e => setStation(e.target.value)} placeholder="766" className={inputCls} />
             </Field>
           </div>
+        )}
+
+        {kind === 'teammate' && (
+          <Field label="Access level">
+            <select
+              value={accessLevel}
+              onChange={e => setAccessLevel(e.target.value as AccessLevel)}
+              className={inputCls}
+            >
+              <option value="coordinator">Coordinator — manage candidates (no delete, no inviting teammates)</option>
+              <option value="admin">Administrator — full access</option>
+            </select>
+          </Field>
         )}
 
         {error && <p className="text-xs font-medium text-red-600">{error}</p>}

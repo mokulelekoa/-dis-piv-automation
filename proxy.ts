@@ -33,9 +33,12 @@ export async function proxy(request: NextRequest) {
   const role = (user?.app_metadata?.role as string | undefined) ?? null
   const { pathname } = request.nextUrl
 
-  // Admin console (except its own login) requires an admin.
+  // Admin console (except its own login) requires either staff tier. The
+  // admin-only actions inside (delete, invite teammates) are gated per-route.
   if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
-    if (!user || role !== 'admin') return redirectTo(request, '/admin/login', response)
+    if (!user || (role !== 'admin' && role !== 'coordinator')) {
+      return redirectTo(request, '/admin/login', response)
+    }
   }
 
   // Candidate portal requires any authenticated user; the page enforces ownership.

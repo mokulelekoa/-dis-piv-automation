@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { getAuthUser, roleOf } from '@/lib/auth'
+import { getAuthUser, roleOf, isStaff } from '@/lib/auth'
 import { supabase } from '@/lib/supabase'
 import { createApplicant } from '@/lib/store'
 import { ROLE_LABELS, type PacketRole } from '@/lib/forms/specs'
@@ -16,13 +16,14 @@ export const runtime = 'nodejs'
  * swaps to our own SMTP (nodemailer) send without changing the account flow.
  */
 export async function POST(request: NextRequest) {
-  const admin = await getAuthUser()
-  if (!admin || roleOf(admin) !== 'admin') {
+  const me = await getAuthUser()
+  if (!isStaff(me)) {
     return Response.json({ error: 'Not authorized.' }, { status: 403 })
   }
 
   let body: {
-    kind?: string; email?: string; firstName?: string; lastName?: string; role?: string; station?: string
+    kind?: string; email?: string; firstName?: string; lastName?: string
+    role?: string; station?: string; accessLevel?: string
   }
   try {
     body = await request.json()
@@ -30,7 +31,17 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Invalid request.' }, { status: 400 })
   }
 
-  const kind = body.kind === 'admin' ? 'admin' : 'candidate'
+  const kind = body.kind === 'teammate' ? 'teammate' : 'candidate'
+
+  // Only full admins may mint new staff accounts (admins or coordinators).
+  // Coordinators can invite candidates, but not other teammates.
+  if (kind === 'teammate' && roleOf(me) !== 'admin') {
+    return Response.json({ error: 'Only an admin can invite teammates.' }, { status: 403 })
+  }
+
+  // Teammate access tier: full admin, or limited coordinator (the safer default).
+  const accessLevel = body.accessLevel === 'admin' ? 'admin' : 'coordinator'
+
   const email = (body.email ?? '').trim().toLowerCase()
   if (!email) return Response.json({ error: 'An email address is required.' }, { status: 400 })
 
@@ -63,7 +74,7 @@ export async function POST(request: NextRequest) {
     // stamped into app_metadata below — this is cosmetic, for the email only.)
     data: kind === 'candidate'
       ? { first_name: firstName, last_name: lastName, role: 'candidate' }
-      : { role: 'admin' },
+      : { role: accessLevel },
   })
   if (inviteErr || !invited?.user) {
     console.error('[invites] inviteUserByEmail failed:', JSON.stringify({
@@ -88,7 +99,7 @@ export async function POST(request: NextRequest) {
 
   // 3) Stamp the tamper-proof role + applicant linkage (only the service role can).
   const app_metadata =
-    kind === 'admin' ? { role: 'admin' } : { role: 'candidate', applicant_id: applicantId }
+    kind === 'teammate' ? { role: accessLevel } : { role: 'candidate', applicant_id: applicantId }
   const { error: stampErr } = await sb.auth.admin.updateUserById(invited.user.id, { app_metadata })
   if (stampErr) {
     return Response.json({ error: `Invited, but failed to set role: ${stampErr.message}` }, { status: 500 })

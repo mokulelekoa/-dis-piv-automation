@@ -11,14 +11,14 @@ import Avatar from '@/app/components/Avatar'
 import BrandHeader from '@/app/components/BrandHeader'
 import UserBadge from '@/app/components/UserBadge'
 import PacketReviewActions from '@/app/components/PacketReviewActions'
-import { requireAdmin } from '@/lib/auth'
+import { requireStaff, roleOf } from '@/lib/auth'
 import { loginActivityForApplicant, timeAgo } from '@/lib/activity'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 export default async function ApplicantDetail({ params }: { params: Promise<{ id: string }> }) {
-  const admin = await requireAdmin()
+  const me = await requireStaff()
   const { id } = await params
   const applicant = await getApplicant(id)
   if (!applicant) notFound()
@@ -39,7 +39,7 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
   return (
     <main className="min-h-screen bg-blue-50">
       <BrandHeader subtitle="Onboarding Command Center" href="/admin"
-        right={<UserBadge email={admin.email ?? null} role="admin" />} />
+        right={<UserBadge email={me.email ?? null} role={roleOf(me) ?? 'coordinator'} />} />
       <div className="mx-auto max-w-3xl px-4 py-10">
         <Link href="/admin" className="mb-5 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-blue-700">
           <ArrowLeft size={14} /> All candidates
