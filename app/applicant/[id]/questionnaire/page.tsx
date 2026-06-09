@@ -28,9 +28,8 @@ export default async function QuestionnairePage({ params }: { params: Promise<{ 
         <header className="mb-8">
           <h1 className="text-2xl font-black text-slate-900">Complete your {ROLE_LABELS[applicant.role]} forms</h1>
           <p className="mt-1 text-sm text-slate-500">
-            {applicant.firstName}, we&rsquo;ll guide you through your VA packet one section at a time. At the end
-            we generate each real VA form, filled in from your answers, for you to review, print, sign in black
-            ink, and upload back.
+            {applicant.firstName}, this is your {ROLE_LABELS[applicant.role]} VA onboarding packet. The steps
+            below walk you through it.
           </p>
         </header>
 
