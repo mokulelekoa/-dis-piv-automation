@@ -50,15 +50,22 @@ export default async function ApplicantSelfReview({ params }: { params: Promise<
         </div>
 
         <Link href={`/applicant/${id}/questionnaire`}
-          className="mb-6 flex items-center gap-3 rounded-2xl border border-accent-200 bg-accent-50 p-4 transition hover:border-accent-300 hover:bg-accent-100">
-          <PenLine size={22} className="flex-shrink-0 text-accent-600" />
-          <div className="flex-1">
-            <div className="text-sm font-bold text-dis-navy">Complete your forms step by step</div>
-            <div className="mt-0.5 text-xs text-accent-700">
-              A guided walkthrough fills every VA form for you — then review, print, sign, and upload.
-            </div>
+          className="group mb-6 flex items-center gap-4 rounded-2xl border-2 border-accent-300 bg-gradient-to-r from-accent-50 to-accent-100 p-5 shadow-sm transition hover:border-accent-400 hover:shadow-md">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-accent-500 text-white shadow-sm">
+            <PenLine size={24} />
           </div>
-          <ArrowRight size={18} className="flex-shrink-0 text-accent-600" />
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-base font-black text-dis-navy">Complete your forms step by step</span>
+              <span className="rounded-full bg-accent-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">Easiest way</span>
+            </div>
+            <p className="mt-1 text-sm text-accent-700">
+              A guided walkthrough fills every VA form for you — then review, print, sign, and upload.
+            </p>
+            <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-black text-accent-700 transition-all group-hover:gap-2.5">
+              Start the walkthrough <ArrowRight size={16} className="flex-shrink-0" />
+            </span>
+          </div>
         </Link>
 
         <PacketForms applicant={applicant} />

@@ -2,8 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Download, CheckCircle2, Loader2 } from 'lucide-react'
+import { Download, CheckCircle2, Loader2, Mail } from 'lucide-react'
 import type { PacketStatus } from '@/lib/store'
+
+/** Trigger a download or mailto: from a synthetic anchor without unloading the page. */
+function clickAway(href: string, download?: string) {
+  const a = document.createElement('a')
+  a.href = href
+  if (download) a.download = download
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
 
 /**
  * Per-candidate packet gate for the admin. A complete packet sits at
@@ -12,12 +22,14 @@ import type { PacketStatus } from '@/lib/store'
  * Completion never auto-unlocks the download — a human must sign off first.
  */
 export default function PacketReviewActions({
-  applicantId, status, downloadable, size = 'sm',
+  applicantId, status, downloadable, candidate, size = 'sm',
 }: {
   applicantId: string
   status: PacketStatus
   /** packetDownloadable(applicant): every form uploaded, stored, 100%, issue-free. */
   downloadable: boolean
+  /** Used to label the emailed packet's filename, subject, and body. */
+  candidate: { firstName: string; lastName: string; station: string }
   size?: 'sm' | 'lg'
 }) {
   const router = useRouter()
@@ -52,14 +64,39 @@ export default function PacketReviewActions({
     }
   }
 
+  // Hand the merged packet to the admin's default mail app (Outlook). mailto: can't
+  // carry an attachment and the packet route is auth-gated, so we download the PDF
+  // first and the draft tells the admin to attach that just-saved file.
+  function emailPacket() {
+    const file = `${candidate.station}_${candidate.lastName}_packet.pdf`.replace(/[^\x20-\x7E]/g, '_')
+    clickAway(`/api/applicants/${applicantId}/package`, file)
+
+    const subject = `CMOP onboarding packet — ${candidate.lastName}, ${candidate.firstName}`
+    const body =
+      `The completed CMOP onboarding credential packet for ${candidate.firstName} ${candidate.lastName} (Station ${candidate.station}) is attached.\r\n\r\n` +
+      `Note: the packet file "${file}" was just downloaded to this computer — please attach it to this message before sending.`
+    clickAway(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`)
+  }
+
   if (released && downloadable) {
     return (
-      <a
-        href={`/api/applicants/${applicantId}/package`}
-        className={`inline-flex items-center gap-1.5 rounded-lg bg-accent-500 ${pad} font-bold text-white transition hover:bg-accent-600`}
-      >
-        <Download size={icon} /> Download packet
-      </a>
+      <div className="inline-flex items-center gap-1.5">
+        <a
+          href={`/api/applicants/${applicantId}/package`}
+          className={`inline-flex items-center gap-1.5 rounded-lg bg-accent-500 ${pad} font-bold text-white transition hover:bg-accent-600`}
+        >
+          <Download size={icon} /> Download packet
+        </a>
+        <button
+          type="button"
+          onClick={emailPacket}
+          title="Email packet (opens Outlook)"
+          aria-label="Email packet"
+          className={`inline-flex items-center gap-1.5 rounded-lg border border-accent-300 bg-white ${pad} font-bold text-accent-700 transition hover:bg-accent-50`}
+        >
+          <Mail size={icon} />{size === 'lg' ? ' Email packet' : ''}
+        </button>
+      </div>
     )
   }
 

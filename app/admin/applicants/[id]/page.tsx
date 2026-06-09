@@ -102,7 +102,8 @@ export default async function ApplicantDetail({ params }: { params: Promise<{ id
                   </p>
                 </div>
               </div>
-              <PacketReviewActions applicantId={applicant.id} status={applicant.status} downloadable size="lg" />
+              <PacketReviewActions applicantId={applicant.id} status={applicant.status} downloadable size="lg"
+                candidate={{ firstName: applicant.firstName, lastName: applicant.lastName, station: applicant.station }} />
             </div>
           )
         })()}

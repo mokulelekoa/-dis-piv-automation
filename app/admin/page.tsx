@@ -93,13 +93,13 @@ export default async function AdminDashboard() {
                 const age = ageAtCurrentStage(t)
                 const stale = age !== null && age >= 7
                 return (
-                  <tr key={a.id} className="hover:bg-slate-50">
+                  <tr key={a.id} className="group relative cursor-pointer hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <Avatar firstName={a.firstName} lastName={a.lastName} size={36}
                           photoUrl={a.photo ? `/api/applicants/${a.id}/photo` : undefined} />
                         <div>
-                          <Link href={`/admin/applicants/${a.id}`} className="font-semibold text-slate-900 hover:text-blue-700">
+                          <Link href={`/admin/applicants/${a.id}`} className="font-semibold text-slate-900 after:absolute after:inset-0 after:content-[''] hover:text-blue-700">
                             {a.lastName}, {a.firstName}
                           </Link>
                           <div className="text-[11px] text-slate-400">Station {a.station}</div>
@@ -160,10 +160,11 @@ export default async function AdminDashboard() {
                         {STATUS_LABELS[a.status]}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
-                      <PacketReviewActions applicantId={a.id} status={a.status} downloadable={packetDownloadable(a)} />
+                    <td className="relative z-10 px-4 py-3">
+                      <PacketReviewActions applicantId={a.id} status={a.status} downloadable={packetDownloadable(a)}
+                        candidate={{ firstName: a.firstName, lastName: a.lastName, station: a.station }} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="relative z-10 px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
                         <ResetPasswordButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} email={a.email} hasAccount={!!act} />
                         <DeleteCandidateButton applicantId={a.id} name={`${a.firstName} ${a.lastName}`} />
