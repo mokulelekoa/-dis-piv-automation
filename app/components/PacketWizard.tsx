@@ -154,17 +154,18 @@ export default function PacketWizard({
             <IdScanDropzone onExtract={applyExtractedId} />
           </div>
           <Grid>
-            <Text label="First name" value={profile.firstName} onChange={v => p('firstName', v)} highlight={autoFilled.firstName} />
+            <Text label="First name" value={profile.firstName} onChange={v => p('firstName', v)} highlight={autoFilled.firstName} required showError={showErrors} />
             <Text label="Middle name" value={profile.middleName} onChange={v => p('middleName', v)} disabled={profile.hasNoMiddleName} highlight={autoFilled.middleName}
+              required={!profile.hasNoMiddleName} showError={showErrors}
               note={<Check label='No middle name (renders as "NMN")' checked={profile.hasNoMiddleName} onChange={v => p('hasNoMiddleName', v)} />} />
-            <Text label="Last name" value={profile.lastName} onChange={v => p('lastName', v)} highlight={autoFilled.lastName} />
+            <Text label="Last name" value={profile.lastName} onChange={v => p('lastName', v)} highlight={autoFilled.lastName} required showError={showErrors} />
             <Text label="Suffix" value={profile.suffix} onChange={v => p('suffix', v)} placeholder="Jr, Sr, II…" highlight={autoFilled.suffix} />
-            <Text label="Date of birth" type="date" value={profile.dateOfBirth} onChange={v => p('dateOfBirth', v)} highlight={autoFilled.dateOfBirth} />
-            <Text label="Sex" value={profile.sex} onChange={v => p('sex', v)} placeholder="M / F" highlight={autoFilled.sex} />
-            <Text label="Social Security Number" value={profile.ssn} onChange={v => p('ssn', v)} className="sm:col-span-2" highlight={autoFilled.ssn} />
-            <PlaceOfBirthFields profile={profile} set={p} autoFilled={autoFilled} />
-            <Text label="Country of citizenship" value={profile.citizenshipCountry} onChange={v => p('citizenshipCountry', v)} highlight={autoFilled.citizenshipCountry} />
-            <Text label="Email" type="email" value={profile.email} onChange={v => p('email', v)} />
+            <Text label="Date of birth" type="date" value={profile.dateOfBirth} onChange={v => p('dateOfBirth', v)} highlight={autoFilled.dateOfBirth} required showError={showErrors} />
+            <Text label="Sex" value={profile.sex} onChange={v => p('sex', v)} placeholder="M / F" highlight={autoFilled.sex} required showError={showErrors} />
+            <Text label="Social Security Number" value={profile.ssn} onChange={v => p('ssn', v)} className="sm:col-span-2" highlight={autoFilled.ssn} required showError={showErrors} />
+            <PlaceOfBirthFields profile={profile} set={p} autoFilled={autoFilled} showError={showErrors} />
+            <Text label="Country of citizenship" value={profile.citizenshipCountry} onChange={v => p('citizenshipCountry', v)} highlight={autoFilled.citizenshipCountry} required showError={showErrors} />
+            <Text label="Email" type="email" value={profile.email} onChange={v => p('email', v)} required showError={showErrors} />
           </Grid>
         </Section>
       ),
@@ -376,7 +377,7 @@ export default function PacketWizard({
         <ReviewStep applicantId={applicantId} requiredForms={requiredForms} initialForms={initialForms} />
       ),
     },
-  ], [profile, answers, autoFilled, isPRorFN, showExplanation, applicantId, firstName, role, requiredForms, initialForms])
+  ], [profile, answers, autoFilled, isPRorFN, showExplanation, applicantId, firstName, role, requiredForms, initialForms, showErrors])
 
   const current = steps[step]
   const stepProblems = current.validate()
@@ -562,10 +563,11 @@ function ReviewStep({ applicantId, requiredForms, initialForms }: {
  * the VA AcroForm). State of birth is shown only for U.S. births — foreign-born
  * candidates have no state, so it's hidden and cleared (mirrors the form spec).
  */
-function PlaceOfBirthFields({ profile, set, autoFilled }: {
+function PlaceOfBirthFields({ profile, set, autoFilled, showError }: {
   profile: CandidateProfile
   set: <K extends keyof CandidateProfile>(k: K, v: CandidateProfile[K]) => void
   autoFilled: AutoFilled
+  showError: boolean
 }) {
   const [zip, setZip] = useState('')
   const [status, setStatus] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
@@ -606,14 +608,14 @@ function PlaceOfBirthFields({ profile, set, autoFilled }: {
             {msg || 'Type a US ZIP to auto-fill city and state.'}
           </p>
         </div>
-        <Text label="City of birth" value={profile.placeOfBirthCity} onChange={v => set('placeOfBirthCity', v)} highlight={autoFilled.placeOfBirthCity} />
+        <Text label="City of birth" value={profile.placeOfBirthCity} onChange={v => set('placeOfBirthCity', v)} highlight={autoFilled.placeOfBirthCity} required showError={showError} />
       </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Text label="Country of birth" value={country} placeholder="USA" highlight={autoFilled.placeOfBirthCountry}
+        <Text label="Country of birth" value={country} placeholder="USA" highlight={autoFilled.placeOfBirthCountry} required showError={showError}
           onChange={v => { set('placeOfBirthCountry', v); if (v.trim() && !isUSCountry(v)) set('placeOfBirthState', '') }} />
         {showState && (
           <SelectField label="State of birth" value={profile.placeOfBirthState}
-            options={US_STATE_OPTIONS} onChange={v => set('placeOfBirthState', v)} placeholder="Select state…" />
+            options={US_STATE_OPTIONS} onChange={v => set('placeOfBirthState', v)} placeholder="Select state…" required showError={showError} />
         )}
       </div>
     </div>

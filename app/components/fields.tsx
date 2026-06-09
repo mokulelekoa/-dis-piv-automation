@@ -31,20 +31,26 @@ export function FromIdBadge() {
   )
 }
 
-export function Text({ label, value, onChange, type = 'text', placeholder, disabled, className, note, highlight }: {
+export function Text({ label, value, onChange, type = 'text', placeholder, disabled, className, note, highlight, required, showError }: {
   label: string; value: string; onChange: (v: string) => void; type?: string
-  placeholder?: string; disabled?: boolean; className?: string; note?: React.ReactNode; highlight?: boolean
+  placeholder?: string; disabled?: boolean; className?: string; note?: React.ReactNode
+  highlight?: boolean; required?: boolean; showError?: boolean
 }) {
+  const isEmpty = !String(value ?? '').trim()
+  const invalid = !!required && isEmpty && !!showError
+  const valid = !!required && !isEmpty
   return (
     <div className={className}>
       <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">
-        {label}{highlight && <FromIdBadge />}
+        {label}{required && <span className="ml-0.5 text-red-500">*</span>}{highlight && <FromIdBadge />}
       </label>
       <input type={type} value={value} placeholder={placeholder} disabled={disabled}
         onChange={e => onChange(e.target.value)}
-        className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30
+        className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2
           ${disabled ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
-            : highlight ? 'border-green-300 bg-green-50/40' : 'border-slate-200 bg-white'}`} />
+            : invalid ? 'border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-500/30'
+            : (valid || highlight) ? 'border-green-400 bg-green-50/40 focus:border-green-600 focus:ring-green-600/30'
+            : 'border-slate-200 bg-white focus:border-blue-600 focus:ring-blue-600/30'}`} />
       {note}
     </div>
   )
@@ -68,17 +74,25 @@ export function Check({ label, checked, onChange }: { label: string; checked: bo
   )
 }
 
-export function SelectField({ label, value, options, onChange, placeholder = 'Select…' }: {
+export function SelectField({ label, value, options, onChange, placeholder = 'Select…', required, showError }: {
   label: string; value: string
   options: (string | { value: string; label: string })[]
-  onChange: (v: string) => void; placeholder?: string
+  onChange: (v: string) => void; placeholder?: string; required?: boolean; showError?: boolean
 }) {
   const opts = options.map(o => (typeof o === 'string' ? { value: o, label: o } : o))
+  const isEmpty = !String(value ?? '').trim()
+  const invalid = !!required && isEmpty && !!showError
+  const valid = !!required && !isEmpty
   return (
     <div>
-      <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">{label}</label>
+      <label className="mb-1 block text-[11px] font-bold uppercase tracking-widest text-slate-400">
+        {label}{required && <span className="ml-0.5 text-red-500">*</span>}
+      </label>
       <select value={value} onChange={e => onChange(e.target.value)}
-        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/30">
+        className={`w-full rounded-lg border px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2
+          ${invalid ? 'border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-500/30'
+            : valid ? 'border-green-400 bg-green-50/40 focus:border-green-600 focus:ring-green-600/30'
+            : 'border-slate-200 bg-white focus:border-blue-600 focus:ring-blue-600/30'}`}>
         <option value="">{placeholder}</option>
         {opts.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
