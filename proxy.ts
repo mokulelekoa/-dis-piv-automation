@@ -43,6 +43,17 @@ export async function proxy(request: NextRequest) {
     if (!user) return redirectTo(request, '/login', response)
   }
 
+  // First-login brief: an authenticated, role-authorized user who hasn't clicked
+  // through the welcome tour gets sent there before reaching their home. Stamped
+  // (user_metadata.briefSeenAt) on completion, so it shows exactly once. /welcome
+  // is outside the matcher, so there's no redirect loop.
+  if (user && !user.user_metadata?.briefSeenAt) {
+    const onHome =
+      (pathname.startsWith('/admin') && pathname !== '/admin/login') ||
+      pathname.startsWith('/applicant')
+    if (onHome) return redirectTo(request, '/welcome', response)
+  }
+
   return response
 }
 
