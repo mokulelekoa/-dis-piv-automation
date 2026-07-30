@@ -10,7 +10,7 @@ import { randomUUID } from 'crypto'
 import { supabase, FORMS_BUCKET, PHOTOS_BUCKET, ATTACHMENTS_BUCKET } from './supabase'
 import { type PacketRole, requiredFormsForRole, getSpec } from './forms/specs'
 import type { AnalysisResult } from './forms/analyze'
-import type { CandidateProfile } from './profile'
+import type { CandidateProfile, WorkHistory } from './profile'
 import type { PacketAnswers } from './forms/questions'
 import {
   type OnboardingTracker, type StageKey, type StageStatus,
@@ -70,6 +70,8 @@ export interface Applicant {
   profile?: CandidateProfile
   /** Human-only declarations (OF-306 background, break-in-service, etc.). */
   answers?: PacketAnswers
+  /** Reusable job history + references feeding Smart Fill on any uploaded form. */
+  workHistory?: WorkHistory
   /** Onboarding-throughput axis: VA pipeline stage, blockers, next action. */
   onboarding?: OnboardingTracker
   /** Candidate-uploaded profile photo, stored under .data/uploads/. */
@@ -445,6 +447,11 @@ export async function saveOnboarding(applicantId: string, onboarding: Onboarding
 /** Save the candidate profile (ID-derived identity) onto an applicant. */
 export async function saveProfile(applicantId: string, profile: CandidateProfile): Promise<Applicant | null> {
   return patch(applicantId, a => { a.profile = profile })
+}
+
+/** Save the reusable job history + references onto an applicant. */
+export async function saveWorkHistory(applicantId: string, workHistory: WorkHistory): Promise<Applicant | null> {
+  return patch(applicantId, a => { a.workHistory = workHistory })
 }
 
 /** Save the human-only questionnaire answers onto an applicant. */

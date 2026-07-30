@@ -41,6 +41,54 @@ export function emptyProfile(): CandidateProfile {
   }
 }
 
+/**
+ * The reusable career record powering Smart Fill. Job applications vary
+ * endlessly in layout, but the data they ask for barely changes: where you
+ * worked, when, for whom, and who can vouch for you. Saved once, reused on
+ * every uploaded form.
+ */
+export interface EmploymentEntry {
+  employer: string
+  title: string
+  startDate: string          // YYYY-MM or MM/YYYY as entered
+  endDate: string            // empty = present
+  city: string
+  state: string
+  supervisor: string
+  phone: string
+  duties: string
+  reasonForLeaving: string
+  mayContact: boolean
+}
+
+export interface ReferenceEntry {
+  name: string
+  relationship: string       // e.g. "Former supervisor"
+  company: string
+  phone: string
+  email: string
+}
+
+export interface WorkHistory {
+  jobs: EmploymentEntry[]
+  references: ReferenceEntry[]
+}
+
+export function emptyWorkHistory(): WorkHistory {
+  return { jobs: [], references: [] }
+}
+
+export function emptyEmployment(): EmploymentEntry {
+  return {
+    employer: '', title: '', startDate: '', endDate: '', city: '', state: '',
+    supervisor: '', phone: '', duties: '', reasonForLeaving: '', mayContact: true,
+  }
+}
+
+export function emptyReference(): ReferenceEntry {
+  return { name: '', relationship: '', company: '', phone: '', email: '' }
+}
+
 /** Last four of the SSN — used for the file-naming convention. */
 export function lastFour(ssn: string): string {
   const digits = ssn.replace(/\D/g, '')

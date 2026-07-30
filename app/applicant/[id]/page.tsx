@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { CheckCircle2, AlertTriangle, PenLine, ArrowRight, Upload } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, PenLine, ArrowRight, Upload, Sparkles } from 'lucide-react'
 import { getApplicant, packetCompleteness, totalMissingCount } from '@/lib/store'
 import { ROLE_LABELS } from '@/lib/forms/specs'
 import PacketForms from '@/app/components/PacketForms'
@@ -67,6 +67,31 @@ export default async function ApplicantSelfReview({ params }: { params: Promise<
             </span>
           </div>
         </Link>
+
+        <Link href={`/applicant/${id}/fill`}
+          className="group mb-6 flex items-center gap-4 rounded-2xl border border-blue-200 bg-white p-5 shadow-sm transition hover:border-blue-400 hover:shadow-md">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+            <Sparkles size={24} />
+          </div>
+          <div className="flex-1">
+            <span className="text-base font-black text-slate-900">Have a different form to fill out?</span>
+            <p className="mt-1 text-sm text-slate-500">
+              Upload any blank form — a PDF, or a clear photo from your phone — and Smart Fill completes it
+              from your saved information.
+            </p>
+            <span className="mt-2 inline-flex items-center gap-1.5 text-sm font-black text-blue-600 transition-all group-hover:gap-2.5">
+              Try Smart Fill <ArrowRight size={16} className="flex-shrink-0" />
+            </span>
+          </div>
+        </Link>
+
+        <div className="mb-6 -mt-4 px-1 text-sm text-slate-500">
+          Smart Fill works best once your{' '}
+          <Link href={`/applicant/${id}/history`} className="font-bold text-blue-600 hover:underline">
+            job history &amp; references
+          </Link>{' '}
+          are saved — enter them once, reuse them on every application.
+        </div>
 
         <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-slate-200 bg-white p-3.5">
           <Upload size={16} className="mt-0.5 flex-shrink-0 text-slate-400" />
