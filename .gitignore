@@ -17,6 +17,11 @@
 /.next/
 /out/
 
+# nested deployable workspaces (apps/*) — the patterns above are root-anchored
+apps/*/node_modules/
+apps/*/.next/
+apps/*/out/
+
 # production
 /build
 
