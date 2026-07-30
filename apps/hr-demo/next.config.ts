@@ -1,20 +1,33 @@
 import type { NextConfig } from 'next'
 
 /**
- * Intentionally empty.
+ * Pin Turbopack's root to this app.
  *
- * Do NOT set `outputFileTracingRoot` here. Because this app has its own
- * lockfile inside the main repo, Next logs a "Detected additional lockfiles"
- * warning during the build — that warning is cosmetic and pinning the tracing
- * root to silence it broke the Vercel build with:
+ * This app is a subdirectory of a repo whose root is itself a Next app, and
+ * that root contains `proxy.ts` (the CMOP Supabase middleware). Next infers its
+ * root by walking up for a lockfile, and on Vercel — where the deployment sets
+ * Root Directory to apps/hr-demo and injects its own config — that inference
+ * landed on the repo root. Next then compiled the repo's `proxy.ts` into this
+ * build, which fails because only this app's dependencies are installed:
  *
- *   ENOENT: no such file or directory, lstat '/vercel/path0/.next/package.json'
+ *   ./proxy.ts:1:1  Module not found: Can't resolve '@supabase/ssr'
  *
- * On Vercel the repo is cloned to /vercel/path0 and the build runs in this
- * subdirectory, so a tracing root computed from the config file's own location
- * resolved back to the repo root and Next looked for build output that lives
- * here instead. Leave tracing alone and let Next work it out.
+ * Turbopack does not resolve files outside its root, so pinning it here keeps
+ * the repo-root app out of this build entirely. It also silences the "Detected
+ * additional lockfiles" warning that was the early symptom of the same thing.
+ *
+ * Use process.cwd() rather than a path derived from this file: the build always
+ * runs with this directory as its working directory (Vercel's Root Directory,
+ * or `npm run build` from here), whereas `import.meta.dirname` resolved to the
+ * repo root on Vercel and broke the build a different way.
+ *
+ * Do NOT set `outputFileTracingRoot` from a file-relative path — that was the
+ * previous failure: ENOENT lstat '/vercel/path0/.next/package.json'.
  */
-const nextConfig: NextConfig = {}
+const nextConfig: NextConfig = {
+  turbopack: {
+    root: process.cwd(),
+  },
+}
 
 export default nextConfig
