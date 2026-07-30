@@ -46,6 +46,9 @@ dev.log
 # QA verification harness build output (compiled lib + synthetic test PDFs)
 /.qa-build/
 
+# unit-test harness output (lib/hr compiled to CommonJS for node --test)
+/.test-build/
+
 # vercel
 .vercel
 

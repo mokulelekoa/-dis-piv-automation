@@ -228,7 +228,11 @@ export const SEED_STATE: HrState = {
   employeeRefMap: {
     jkim: '10241', mruiz: '10242', ralvarez: '10305', tnguyen: '10412', dokafor: '10413',
   },
-  stats: { hiresSynced: 6, lettersGenerated: 2, payrollRunsBalanced: 0 },
+  // hiresSynced counts employees entered in BOTH systems — Kim, Ruiz, Alvarez,
+  // Fontaine and Nguyen. Okafor (Employee Navigator pending) and Shah (neither)
+  // are the outstanding work. setSync() keeps this in step, so it has to start
+  // consistent with the roster above.
+  stats: { hiresSynced: 5, lettersGenerated: 2, payrollRunsBalanced: 0 },
 }
 
 /** Minutes of manual work each automated action gives back (used for stats). */

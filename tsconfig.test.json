@@ -1,0 +1,25 @@
+{
+  "//": "Compiles the pure-logic HR modules to CommonJS so Node's built-in test runner can require them. Keeps the test harness dependency-free. Output is gitignored (.test-build/).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": false,
+    "incremental": false,
+    "outDir": ".test-build",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2021",
+    "jsx": "react-jsx",
+    "plugins": []
+  },
+  "include": [
+    "lib/hr/types.ts",
+    "lib/hr/csv.ts",
+    "lib/hr/data.ts",
+    "lib/hr/exports.ts",
+    "lib/hr/letters.ts",
+    "lib/hr/links.ts",
+    "lib/hr/payroll.ts"
+  ],
+  "exclude": ["node_modules", "apps", ".next"]
+}
