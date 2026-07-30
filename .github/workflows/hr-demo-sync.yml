@@ -1,0 +1,48 @@
+name: hr-demo sync
+
+# apps/hr-demo holds copies of app/hr, lib/hr, globals.css, the logo and the
+# favicon. Editing an original without re-running the sync script would ship a
+# stale standalone deployment, and nothing about that failure is loud — the app
+# still builds, it just serves older code. This check makes the drift visible.
+#
+# Deliberately no `paths:` filter: the job needs no dependency install and takes
+# seconds, and a path-filtered workflow reports as "skipped" rather than
+# "success", which blocks merges when it is set as a required status check.
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: apps/hr-demo matches its sources
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # The script uses only node: builtins, so there is nothing to install.
+      - name: Verify apps/hr-demo is in sync
+        run: node scripts/sync-hr-demo.mjs --check
+
+      - name: Explain how to fix a failure
+        if: failure()
+        run: |
+          {
+            echo '### apps/hr-demo is out of date'
+            echo
+            echo 'Sources under `app/hr/` or `lib/hr/` changed without refreshing the'
+            echo 'standalone deployment. From the repository root, run:'
+            echo
+            echo '```bash'
+            echo 'node scripts/sync-hr-demo.mjs'
+            echo '```'
+            echo
+            echo 'then commit the resulting changes under `apps/hr-demo/`.'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -31,14 +31,18 @@ const MIRRORED = [
   ['app/favicon.ico', 'app/favicon.ico'],
 ]
 
-function filesUnder(path, base = path, out = []) {
-  if (!existsSync(path)) return out
-  if (statSync(path).isFile()) return [...out, relative(base, path) || '']
-  for (const entry of readdirSync(path)) filesUnder(join(path, entry), base, out)
+/** Every file below `dir`, as paths relative to `base`. Accumulates into `out`. */
+function filesUnder(dir, base = dir, out = []) {
+  if (!existsSync(dir)) return out
+  if (statSync(dir).isFile()) {
+    out.push(relative(base, dir))
+    return out
+  }
+  for (const entry of readdirSync(dir)) filesUnder(join(dir, entry), base, out)
   return out
 }
 
-let drifted = []
+const drifted = []
 
 for (const [from, to] of MIRRORED) {
   const src = join(root, from)
@@ -46,14 +50,26 @@ for (const [from, to] of MIRRORED) {
   if (!existsSync(src)) throw new Error(`Missing source: ${from}`)
 
   if (check) {
-    const isFile = statSync(src).isFile()
-    const names = isFile ? [''] : filesUnder(src)
-    for (const name of names) {
-      const a = isFile ? src : join(src, name)
-      const b = isFile ? dest : join(dest, name)
-      if (!existsSync(b) || !readFileSync(a).equals(readFileSync(b))) {
-        drifted.push(join(to, name))
+    if (statSync(src).isFile()) {
+      if (!existsSync(dest) || !readFileSync(src).equals(readFileSync(dest))) {
+        drifted.push(`${to} (differs or missing)`)
       }
+      continue
+    }
+
+    const sourceNames = filesUnder(src)
+    for (const name of sourceNames) {
+      const a = join(src, name)
+      const b = join(dest, name)
+      if (!existsSync(b)) drifted.push(`${join(to, name)} (missing from copy)`)
+      else if (!readFileSync(a).equals(readFileSync(b))) drifted.push(`${join(to, name)} (differs)`)
+    }
+
+    // A source file that was deleted or renamed leaves a stale copy behind;
+    // syncing would remove it, so the check has to notice it too.
+    const expected = new Set(sourceNames)
+    for (const name of filesUnder(dest)) {
+      if (!expected.has(name)) drifted.push(`${join(to, name)} (no longer in source)`)
     }
     continue
   }
