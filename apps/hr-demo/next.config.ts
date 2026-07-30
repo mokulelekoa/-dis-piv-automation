@@ -21,13 +21,27 @@ import type { NextConfig } from 'next'
  * or `npm run build` from here), whereas `import.meta.dirname` resolved to the
  * repo root on Vercel and broke the build a different way.
  *
- * Do NOT set `outputFileTracingRoot` from a file-relative path — that was the
- * previous failure: ENOENT lstat '/vercel/path0/.next/package.json'.
+ * Both roots must be set, and to the SAME value. Setting only turbopack.root
+ * is not enough — Next infers outputFileTracingRoot as the repo root, notices
+ * the two disagree, and resolves it in favour of outputFileTracingRoot:
+ *
+ *   ⚠ Both `outputFileTracingRoot` and `turbopack.root` are set, but they must
+ *     have the same value. Using `outputFileTracingRoot` value: /vercel/path0.
+ *
+ * which put the root straight back at the repo and recompiled proxy.ts.
+ *
+ * Earlier, setting outputFileTracingRoot alone ALSO failed (ENOENT lstat
+ * '/vercel/path0/.next/package.json') because it was derived from this file's
+ * location, which resolves to the repo root on Vercel. process.cwd() is the
+ * value that is correct in both places.
  */
+const appRoot = process.cwd()
+
 const nextConfig: NextConfig = {
   turbopack: {
-    root: process.cwd(),
+    root: appRoot,
   },
+  outputFileTracingRoot: appRoot,
 }
 
 export default nextConfig
