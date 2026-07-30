@@ -48,3 +48,26 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
+
+/*
+ * Letter Studio print support: when printing, show only the letters inside
+ * .letter-print-area (one page each) and hide the rest of the app chrome.
+ */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .letter-print-area,
+  .letter-print-area * {
+    visibility: visible;
+  }
+  .letter-print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+  .letter-print-page {
+    break-after: page;
+  }
+}
+
