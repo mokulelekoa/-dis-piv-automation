@@ -22,6 +22,7 @@ export default function PayrollBridgePage() {
   const [reportTotal, setReportTotal] = useState('')
   const [pasteText, setPasteText] = useState('')
   const [fixLog, setFixLog] = useState<string[]>([])
+  const [confirmFixAll, setConfirmFixAll] = useState(false)
   const recordedRef = useRef(false)
 
   const issues = useMemo(
@@ -39,6 +40,7 @@ export default function PayrollBridgePage() {
     if (parsed.rows.length > 0) {
       setRows(parsed.rows)
       setFixLog([])
+      setConfirmFixAll(false)
       recordedRef.current = false
     }
   }
@@ -51,7 +53,23 @@ export default function PayrollBridgePage() {
   const fixAllAutomatic = () => {
     setRows(r => (r ? fixOvertime(fixNegatives(fixDuplicates(r)), state.payCodeMap) : r))
     setFixLog(log => [...log, 'Removed duplicates', 'Excluded negative lines', 'Split overtime'])
+    setConfirmFixAll(false)
   }
+
+  /**
+   * Exactly what "fix everything" would change, so the confirmation step can
+   * spell it out rather than asking for blind agreement. Employee links and pay
+   * code mappings are excluded on purpose — those need a human decision.
+   */
+  const autoFixPlan = (() => {
+    const dupLines = issues
+      .filter(i => i.kind === 'duplicate')
+      .reduce((n, i) => n + i.lines.length - 1, 0)
+    const negLines = issues.find(i => i.kind === 'negativeHours')?.lines.length ?? 0
+    const otWeeks = issues.filter(i => i.kind === 'otNotSplit').length
+    const manual = issues.filter(i => i.kind === 'unknownEmployee' || i.kind === 'unmappedCode').length
+    return { dupLines, negLines, otWeeks, manual, total: dupLines + negLines + otWeeks }
+  })()
 
   const paycorLines = rows && issues.length === 0 ? toPaycorLines(rows, state.employeeRefMap, state.payCodeMap, state.employees) : []
 
@@ -93,7 +111,7 @@ export default function PayrollBridgePage() {
           </li>
         ))}
         {rows && (
-          <button type="button" onClick={() => { setRows(null); setPasteText(''); setFixLog([]); setParseErrors([]) }}
+          <button type="button" onClick={() => { setRows(null); setPasteText(''); setFixLog([]); setParseErrors([]); setConfirmFixAll(false) }}
             className="ml-auto inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-slate-700">
             <RotateCcw size={13} /> Start over
           </button>
@@ -183,11 +201,69 @@ export default function PayrollBridgePage() {
           </Card>
 
           {issues.length > 0 && (
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Found in this export</h2>
-              <button type="button" className={btnPrimary} onClick={fixAllAutomatic}>
-                <Wand2 size={15} /> Fix everything automatic
-              </button>
+            <div className="mb-4">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">Found in this export</h2>
+                {!confirmFixAll && (
+                  <button type="button" className={btnPrimary}
+                    disabled={autoFixPlan.total === 0}
+                    onClick={() => setConfirmFixAll(true)}>
+                    <Wand2 size={15} /> Fix everything automatic
+                  </button>
+                )}
+              </div>
+
+              {/* Step two: say exactly what will change before changing it. */}
+              {confirmFixAll && (
+                <div className="mt-3 rounded-2xl border-2 border-accent-300 bg-accent-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 shrink-0 rounded-lg bg-accent-500 p-1.5 text-white">
+                      <AlertTriangle size={15} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-black text-slate-900">
+                        Apply {autoFixPlan.total} automatic change{autoFixPlan.total === 1 ? '' : 's'} to this export?
+                      </div>
+                      <ul className="mt-2 space-y-1 text-xs text-slate-700">
+                        {autoFixPlan.dupLines > 0 && (
+                          <li>
+                            <span className="font-bold">Remove {autoFixPlan.dupLines} duplicate line{autoFixPlan.dupLines === 1 ? '' : 's'}</span>
+                            {' '}&mdash; keeps the first of each repeated entry.
+                          </li>
+                        )}
+                        {autoFixPlan.negLines > 0 && (
+                          <li>
+                            <span className="font-bold">Exclude {autoFixPlan.negLines} negative line{autoFixPlan.negLines === 1 ? '' : 's'}</span>
+                            {' '}&mdash; these must be corrected in Unanet; they will not reach Paycor.
+                          </li>
+                        )}
+                        {autoFixPlan.otWeeks > 0 && (
+                          <li>
+                            <span className="font-bold">Split overtime for {autoFixPlan.otWeeks} week{autoFixPlan.otWeeks === 1 ? '' : 's'}</span>
+                            {' '}&mdash; 40 h stays regular, the remainder moves to OT.
+                          </li>
+                        )}
+                      </ul>
+                      <p className="mt-2 text-[11px] leading-relaxed text-slate-600">
+                        Nothing is written to Unanet or Paycor &mdash; this only changes the hours staged here.
+                        {autoFixPlan.manual > 0 && (
+                          <> {autoFixPlan.manual} issue{autoFixPlan.manual === 1 ? '' : 's'} need your decision and
+                          {' '}will be left alone.</>
+                        )}
+                        {' '}To undo, use <span className="font-semibold">Start over</span> and re-import.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button type="button" className={btnPrimary} onClick={fixAllAutomatic}>
+                          <Check size={15} /> Yes, apply {autoFixPlan.total} change{autoFixPlan.total === 1 ? '' : 's'}
+                        </button>
+                        <button type="button" className={btnSecondary} onClick={() => setConfirmFixAll(false)}>
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

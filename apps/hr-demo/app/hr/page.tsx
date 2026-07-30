@@ -2,10 +2,9 @@
 
 import Link from 'next/link'
 import {
-  ArrowRight, Banknote, Building2, Clock3, FileSignature, ShieldCheck, Sparkles, UserPlus,
+  ArrowRight, Banknote, Building2, FileSignature, ShieldCheck, Sparkles, UserPlus,
 } from 'lucide-react'
 import { useHr } from '@/lib/hr/store'
-import { MINUTES_SAVED } from '@/lib/hr/data'
 import { PACKETS_HREF } from '@/lib/hr/links'
 import { Card, ContractChip, StatTile, timeAgoShort } from './ui'
 
@@ -18,12 +17,6 @@ const MODULE_META = {
 export default function HrDashboard() {
   const { state } = useHr()
   const pendingHires = state.employees.filter(e => !e.sync.paycor.done || !e.sync.employeeNavigator.done)
-
-  const minutesSaved =
-    state.stats.hiresSynced * MINUTES_SAVED.perHireSynced +
-    state.stats.lettersGenerated * MINUTES_SAVED.perLetter +
-    state.stats.payrollRunsBalanced * MINUTES_SAVED.perPayrollRun
-  const hoursSaved = (minutesSaved / 60).toFixed(1)
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
@@ -41,9 +34,7 @@ export default function HrDashboard() {
       </header>
 
       {/* Stats */}
-      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile accent icon={<Clock3 size={18} />} label="Time given back" value={`${hoursSaved} h`}
-          sub="vs. doing it all by hand" />
+      <div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatTile icon={<UserPlus size={18} />} label="Hires awaiting entry" value={String(pendingHires.length)}
           sub={pendingHires[0] ? `Next: ${pendingHires[0].firstName} ${pendingHires[0].lastName}` : 'All caught up'} />
         <StatTile icon={<FileSignature size={18} />} label="Letters generated" value={String(state.stats.lettersGenerated)}

@@ -234,10 +234,3 @@ export const SEED_STATE: HrState = {
   // consistent with the roster above.
   stats: { hiresSynced: 5, lettersGenerated: 2, payrollRunsBalanced: 0 },
 }
-
-/** Minutes of manual work each automated action gives back (used for stats). */
-export const MINUTES_SAVED = {
-  perHireSynced: 25,
-  perLetter: 15,
-  perPayrollRun: 90,
-}

@@ -10,7 +10,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const {
   SEED_CONTRACTS, SEED_EMPLOYEES, SEED_STATE, SEED_PAY_CODE_MAP, PAYCOR_EARN_CODES,
-  SAMPLE_UNANET_CSV, SAMPLE_REPORT_TOTAL, MINUTES_SAVED,
+  SAMPLE_UNANET_CSV, SAMPLE_REPORT_TOTAL,
 } = require('../.test-build/data.js')
 const { parseUnanetExport, sumHours } = require('../.test-build/payroll.js')
 
@@ -215,9 +215,5 @@ test('seed state and stats', async t => {
       assert.ok(!Number.isNaN(Date.parse(a.at)), a.id)
       assert.ok(['new-hires', 'letters', 'payroll'].includes(a.module), a.module)
     }
-  })
-
-  await t.test('every minutes-saved figure is positive', () => {
-    for (const [k, v] of Object.entries(MINUTES_SAVED)) assert.ok(v > 0, k)
   })
 })
