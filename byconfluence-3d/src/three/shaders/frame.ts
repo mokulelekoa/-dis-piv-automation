@@ -51,6 +51,13 @@ uniform vec3  uFogColor;
 uniform float uFogDensity;
 uniform float uOpacity;
 
+// Real footage, when it exists. uPhotoMix crossfades procedural → photo as the
+// texture arrives, so a missing or still-loading image is never a black frame.
+uniform sampler2D uTexture;
+uniform float uPhotoMix;
+uniform vec2  uCoverScale;   // cover-fit crop of the photo into the 2.39:1 plate
+uniform vec2  uCoverOffset;
+
 varying vec2 vUv;
 varying float vDepth;
 
@@ -103,6 +110,15 @@ vec3 footage(vec2 uv, float t) {
   return col;
 }
 
+/** Cover-fit into the photo's cropped window, clamped so the refraction wobble
+    can never pull samples outside the crop and smear its edge pixels. */
+vec2 cover(vec2 uv) {
+  vec2 p = uCoverOffset + uv * uCoverScale;
+  vec2 lo = uCoverOffset + uCoverScale * 0.004;
+  vec2 hi = uCoverOffset + uCoverScale * 0.996;
+  return clamp(p, lo, hi);
+}
+
 void main() {
   vec2 uv = vUv;
 
@@ -116,9 +132,23 @@ void main() {
   vec2 ca = fromCentre * edge * (0.018 + uHover * 0.012);
 
   vec3 col;
-  col.r = footage(ruv + ca, uTime).r;
-  col.g = footage(ruv, uTime).g;
-  col.b = footage(ruv - ca, uTime).b;
+  if (uPhotoMix > 0.999) {
+    // Photo fully in — skip the three procedural evaluations entirely.
+    col.r = texture2D(uTexture, cover(ruv + ca)).r;
+    col.g = texture2D(uTexture, cover(ruv)).g;
+    col.b = texture2D(uTexture, cover(ruv - ca)).b;
+  } else {
+    col.r = footage(ruv + ca, uTime).r;
+    col.g = footage(ruv, uTime).g;
+    col.b = footage(ruv - ca, uTime).b;
+    if (uPhotoMix > 0.001) {
+      vec3 photo;
+      photo.r = texture2D(uTexture, cover(ruv + ca)).r;
+      photo.g = texture2D(uTexture, cover(ruv)).g;
+      photo.b = texture2D(uTexture, cover(ruv - ca)).b;
+      col = mix(col, photo, uPhotoMix);
+    }
+  }
 
   // --- grade -----------------------------------------------------------------
   // Inactive frames sit back: desaturated, lower contrast, dimmer. Cheaper and

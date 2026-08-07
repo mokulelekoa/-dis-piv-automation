@@ -1,6 +1,18 @@
-import { useMemo, useRef, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Color, Group, Mesh, PerspectiveCamera, Vector3 } from 'three'
+import {
+  Color,
+  DataTexture,
+  Group,
+  Mesh,
+  PerspectiveCamera,
+  RGBAFormat,
+  SRGBColorSpace,
+  Texture,
+  TextureLoader,
+  Vector2,
+  Vector3,
+} from 'three'
 import { frameFragment, frameVertex } from './shaders/frame'
 import { useShaderMaterial } from './useShaderMaterial'
 import { work } from '../data/site'
@@ -11,6 +23,56 @@ import { damp, fogDensityAt } from '../lib/depth'
 const RADIUS = 7.4
 const TAU = Math.PI * 2
 const STEP = TAU / work.length
+
+/** The plate's aspect (5.5 / 2.3) — cover-fit crops photos into this shape. */
+const PLATE_ASPECT = 5.5 / 2.3
+
+/**
+ * 1×1 neutral placeholder bound to every frame's sampler until (unless) its real
+ * photo arrives — sampling an unbound texture is undefined-ish across drivers.
+ */
+const BLANK = new DataTexture(new Uint8Array([12, 40, 52, 255]), 1, 1, RGBAFormat)
+BLANK.needsUpdate = true
+
+/**
+ * Loads a work item's photo, if it has one. Missing files and network failures
+ * resolve to `null` — the frame keeps its procedural plate and nothing logs.
+ */
+function usePhoto(url: string | undefined) {
+  const [texture, setTexture] = useState<Texture | null>(null)
+  const { gl } = useThree()
+
+  useEffect(() => {
+    if (!url) return
+    let live = true
+    const loader = new TextureLoader()
+    loader.load(
+      url,
+      (tex) => {
+        if (!live) {
+          tex.dispose()
+          return
+        }
+        tex.colorSpace = SRGBColorSpace
+        tex.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy())
+        setTexture(tex)
+      },
+      undefined,
+      () => {
+        /* absent photo → procedural plate stays; this is the supported state */
+      },
+    )
+    return () => {
+      live = false
+      setTexture((t) => {
+        t?.dispose()
+        return null
+      })
+    }
+  }, [url, gl])
+
+  return texture
+}
 
 /** How far in front of the diver the ring hangs. */
 const RING_DISTANCE = 18
@@ -139,6 +201,7 @@ function Frame({
   waterColor: Color
 }) {
   const mesh = useRef<Mesh>(null)
+  const photo = usePhoto(item.photo)
 
   const material = useShaderMaterial({
     vertexShader: frameVertex,
@@ -156,8 +219,33 @@ function Frame({
       uFogColor: { value: new Color('#0b5570') },
       uFogDensity: { value: 0.01 },
       uOpacity: { value: 0 },
+      uTexture: { value: BLANK },
+      uPhotoMix: { value: 0 },
+      uCoverScale: { value: new Vector2(1, 1) },
+      uCoverOffset: { value: new Vector2(0, 0) },
     },
   })
+
+  // Bind the photo and its cover-fit crop when it arrives.
+  useEffect(() => {
+    const u = material.uniforms
+    if (!photo) {
+      u.uTexture.value = BLANK
+      return
+    }
+    const img = photo.image as { width?: number; height?: number } | undefined
+    const aspect = img?.width && img?.height ? img.width / img.height : PLATE_ASPECT
+    if (aspect > PLATE_ASPECT) {
+      // Wider than the plate: full height, crop the sides.
+      u.uCoverScale.value.set(PLATE_ASPECT / aspect, 1)
+      u.uCoverOffset.value.set((1 - PLATE_ASPECT / aspect) / 2, 0)
+    } else {
+      // Taller than the plate: full width, crop top/bottom.
+      u.uCoverScale.value.set(1, aspect / PLATE_ASPECT)
+      u.uCoverOffset.value.set(0, (1 - aspect / PLATE_ASPECT) / 2)
+    }
+    u.uTexture.value = photo
+  }, [photo, material])
 
   const angle = index * STEP
 
@@ -175,6 +263,8 @@ function Frame({
     u.uActive.value = damp(u.uActive.value, active === index ? 1 : 0, 6, dt)
     u.uHover.value = damp(u.uHover.value, galleryState.hover === index ? 1 : 0, 8, dt)
     u.uOpacity.value = damp(u.uOpacity.value, shown, 6, dt)
+    // Crossfade the plate to the photograph once it is bound.
+    u.uPhotoMix.value = damp(u.uPhotoMix.value, u.uTexture.value === BLANK ? 0 : 1, 3.5, dt)
     u.uFogColor.value.copy(waterColor)
     // A fixed, gentle density: the frames should recede from each other around
     // the ring without being swallowed by whatever depth the reader is at.

@@ -64,6 +64,14 @@ export type WorkItem = {
   /** Drives the procedural footage shader — hue/mood seed per frame. */
   palette: [number, number, number]
   seed: number
+  /**
+   * Optional real photograph for this frame, relative to the site root
+   * (e.g. '/photos/work-01.jpg'). When the file exists it crossfades in over
+   * the procedural plate; when it is missing or fails to load, the procedural
+   * plate simply stays. Populate `public/photos/` via `tools/fetch-photos.mjs`
+   * (run on a machine with open network access) or by dropping files in.
+   */
+  photo?: string
 }
 
 /** Placeholder portfolio — replace with the studio's real work. */
@@ -79,6 +87,7 @@ export const work: WorkItem[] = [
       'Twenty-two dives across a single reef system, shot to make temperature visible. The film opens at the surface and never once cuts back to it.',
     palette: [0.52, 0.74, 0.55],
     seed: 11.3,
+    photo: '/photos/work-01.jpg',
   },
   {
     index: '02',
@@ -91,6 +100,7 @@ export const work: WorkItem[] = [
       'A portrait of a coastline told by the families who have read it for eight generations. Handheld, available light, no re-enactments.',
     palette: [0.09, 0.58, 0.62],
     seed: 27.9,
+    photo: '/photos/work-02.jpg',
   },
   {
     index: '03',
@@ -103,6 +113,7 @@ export const work: WorkItem[] = [
       'Nine mornings from a doors-off platform, waiting for the exact eleven minutes when the trades drop and the valley holds its cloud.',
     palette: [0.60, 0.52, 0.70],
     seed: 43.1,
+    photo: '/photos/work-03.jpg',
   },
   {
     index: '04',
@@ -115,6 +126,7 @@ export const work: WorkItem[] = [
       'A single sustained split-level frame — half sky, half water column — held long enough that the audience stops noticing the line.',
     palette: [0.45, 0.70, 0.60],
     seed: 58.6,
+    photo: '/photos/work-04.jpg',
   },
   {
     index: '05',
@@ -127,6 +139,7 @@ export const work: WorkItem[] = [
       'Four years of the same transect, the same lens, the same hour. The edit does nothing clever. It does not need to.',
     palette: [0.27, 0.52, 0.55],
     seed: 71.4,
+    photo: '/photos/work-05.jpg',
   },
   {
     index: '06',
@@ -139,6 +152,7 @@ export const work: WorkItem[] = [
       'Macro work at 18 metres on a moving substrate, lit so the coral reads as an animal rather than a rock.',
     palette: [0.56, 0.82, 0.48],
     seed: 88.2,
+    photo: '/photos/work-06.jpg',
   },
 ]
 

@@ -97,6 +97,32 @@ nothing, and every animated uniform silently freezes at its initial value with n
   the full list of work is present as text for anyone not seeing the canvas.
 - Skip link, visible focus rings, semantic landmarks, and no horizontal overflow at 390 px.
 
+## Using the studio's real photographs
+
+The reel is wired to show real photos: each work item in `src/data/site.ts` points at
+`/photos/work-01.jpg` … `work-06.jpg`. When a file exists it **crossfades in over the procedural
+plate** — cover-fit into the 2.39:1 frame, with the water refraction, grade, fog and grain still
+applied on top. When a file is missing (the shipped state) the procedural plate simply stays; the
+console 404s for absent photos are expected and harmless.
+
+Three ways to get the photos in:
+
+1. **Run the scraper on your own machine** (the studio's site is blocked from the Claude Code
+   cloud environment by its network egress policy):
+   ```bash
+   node tools/fetch-photos.mjs        # scrapes https://www.byconfluence.com
+   ```
+   It pulls the largest images from the site (following same-site nav one level deep), writes the
+   six biggest as `public/photos/work-01…06.jpg`, the rest as `extra-*.jpg`, and records every
+   source URL in `attribution.json`. Rename files to choose which photo belongs to which project.
+2. **Drop files in manually** — anything named `public/photos/work-01.jpg` … `work-06.jpg`.
+3. **Open the cloud environment's network policy** to `www.byconfluence.com` +
+   `images.squarespace-cdn.com` (see the Claude Code on the web environment settings) and ask the
+   agent to pull them.
+
+> The photographs are **© By Confluence**. They may be used inside this concept to show the studio
+> its own site reimagined — do not redistribute them or ship them anywhere public.
+
 ## Known gaps
 
 - The frames are **procedural stand-ins**, not the studio's footage. `footage()` in
