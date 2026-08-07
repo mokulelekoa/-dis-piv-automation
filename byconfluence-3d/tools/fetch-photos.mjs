@@ -42,19 +42,22 @@ const fetchText = async (url) => {
   return res.text()
 }
 
-/** Widest candidate from a srcset attribute value. */
+/**
+ * Widest candidate from a srcset attribute value. Matches "url descriptor"
+ * pairs instead of splitting on commas — URLs may themselves contain commas.
+ */
 const widestFromSrcset = (srcset) => {
   let best = null
   let bestW = -1
-  for (const part of srcset.split(',')) {
-    const [u, d] = part.trim().split(/\s+/)
-    const w = d?.endsWith('w') ? parseInt(d, 10) : 0
+  for (const m of srcset.matchAll(/(\S+)\s+(\d+(?:\.\d+)?)[wx]/g)) {
+    const w = parseFloat(m[2])
     if (w > bestW) {
       bestW = w
-      best = u
+      best = m[1]
     }
   }
-  return best
+  // No width/density descriptors at all → first whitespace-delimited token.
+  return best ?? srcset.trim().split(/\s+/)[0] ?? null
 }
 
 const collectImageUrls = (html, baseUrl) => {
@@ -75,15 +78,23 @@ const collectImageUrls = (html, baseUrl) => {
 
   for (const m of html.matchAll(/<img[^>]+>/gi)) {
     const tag = m[0]
-    const srcset = tag.match(/(?:data-srcset|srcset)\s*=\s*["']([^"']+)["']/i)?.[1]
+    // data-srcset first, explicitly: lazy-loaders put a tiny placeholder in
+    // srcset and the real candidates in data-srcset, in either order.
+    const srcset =
+      tag.match(/data-srcset\s*=\s*["']([^"']+)["']/i)?.[1] ??
+      tag.match(/\ssrcset\s*=\s*["']([^"']+)["']/i)?.[1]
     if (srcset) add(widestFromSrcset(srcset))
     add(tag.match(/data-src\s*=\s*["']([^"']+)["']/i)?.[1])
     add(tag.match(/\ssrc\s*=\s*["']([^"']+)["']/i)?.[1])
   }
   for (const m of html.matchAll(/background(?:-image)?\s*:[^;"']*url\(\s*["']?([^"')]+)["']?\s*\)/gi))
     add(m[1])
-  for (const m of html.matchAll(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/gi))
-    add(m[1])
+  // og:image, tolerating either attribute order.
+  for (const m of html.matchAll(/<meta[^>]+>/gi)) {
+    const tag = m[0]
+    if (/property\s*=\s*["']og:image["']/i.test(tag))
+      add(tag.match(/content\s*=\s*["']([^"']+)["']/i)?.[1])
+  }
   // Squarespace galleries often carry the asset only in data-image.
   for (const m of html.matchAll(/data-image\s*=\s*["']([^"']+)["']/gi)) add(m[1])
   return urls
@@ -92,9 +103,11 @@ const collectImageUrls = (html, baseUrl) => {
 const sameSiteNavLinks = (html, baseUrl) => {
   const origin = new URL(baseUrl).origin
   const links = new Set()
-  for (const m of html.matchAll(/<a[^>]+href\s*=\s*["']([^"'#]+)["']/gi)) {
+  for (const m of html.matchAll(/<a[^>]+href\s*=\s*["']([^"']+)["']/gi)) {
     try {
       const abs = new URL(m[1], baseUrl)
+      abs.hash = '' // strip the fragment; don't discard the whole link over it
+      if (abs.href === new URL(baseUrl).href) continue
       if (abs.origin === origin && !/\.(pdf|jpg|png|zip)$/i.test(abs.pathname))
         links.add(abs.href.replace(/\/$/, ''))
     } catch {
@@ -140,13 +153,23 @@ const main = async () => {
   }
 
   downloads.sort((a, b) => b.buf.length - a.buf.length)
-  const ext = (t) => (t.includes('png') ? '.png' : t.includes('webp') ? '.webp' : '.jpg')
+
+  // Clear previous runs first: a shorter run must not leave stale work-*/extra-*
+  // files behind that attribution.json no longer describes.
+  for (const f of fs.readdirSync(OUT))
+    if (/^(work|extra)-\d+\.(jpe?g|png|webp)$/i.test(f) || f === 'attribution.json')
+      fs.unlinkSync(path.join(OUT, f))
+
+  // Always name outputs .jpg regardless of the served content type: the site
+  // requests photos/work-0N.jpg verbatim, and browsers sniff the real format
+  // from the bytes, so a PNG or WebP behind a .jpg name decodes fine. The true
+  // type is recorded in attribution.json.
   const manifest = []
   downloads.forEach((d, i) => {
     const name =
-      i < 6 ? `work-${String(i + 1).padStart(2, '0')}${ext(d.type)}` : `extra-${String(i - 5).padStart(2, '0')}${ext(d.type)}`
+      i < 6 ? `work-${String(i + 1).padStart(2, '0')}.jpg` : `extra-${String(i - 5).padStart(2, '0')}.jpg`
     fs.writeFileSync(path.join(OUT, name), d.buf)
-    manifest.push({ file: name, source: d.url, bytes: d.buf.length })
+    manifest.push({ file: name, source: d.url, contentType: d.type, bytes: d.buf.length })
   })
 
   fs.writeFileSync(

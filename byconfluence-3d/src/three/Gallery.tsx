@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, type RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import {
   Color,
   DataTexture,
   Group,
+  LinearFilter,
   Mesh,
   PerspectiveCamera,
   RGBAFormat,
@@ -33,46 +34,6 @@ const PLATE_ASPECT = 5.5 / 2.3
  */
 const BLANK = new DataTexture(new Uint8Array([12, 40, 52, 255]), 1, 1, RGBAFormat)
 BLANK.needsUpdate = true
-
-/**
- * Loads a work item's photo, if it has one. Missing files and network failures
- * resolve to `null` — the frame keeps its procedural plate and nothing logs.
- */
-function usePhoto(url: string | undefined) {
-  const [texture, setTexture] = useState<Texture | null>(null)
-  const { gl } = useThree()
-
-  useEffect(() => {
-    if (!url) return
-    let live = true
-    const loader = new TextureLoader()
-    loader.load(
-      url,
-      (tex) => {
-        if (!live) {
-          tex.dispose()
-          return
-        }
-        tex.colorSpace = SRGBColorSpace
-        tex.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy())
-        setTexture(tex)
-      },
-      undefined,
-      () => {
-        /* absent photo → procedural plate stays; this is the supported state */
-      },
-    )
-    return () => {
-      live = false
-      setTexture((t) => {
-        t?.dispose()
-        return null
-      })
-    }
-  }, [url, gl])
-
-  return texture
-}
 
 /** How far in front of the diver the ring hangs. */
 const RING_DISTANCE = 18
@@ -201,7 +162,7 @@ function Frame({
   waterColor: Color
 }) {
   const mesh = useRef<Mesh>(null)
-  const photo = usePhoto(item.photo)
+  const { gl } = useThree()
 
   const material = useShaderMaterial({
     vertexShader: frameVertex,
@@ -226,26 +187,60 @@ function Frame({
     },
   })
 
-  // Bind the photo and its cover-fit crop when it arrives.
+  // One effect owns the photo's whole life: load → configure → bind → unbind →
+  // dispose. No React state — the uniforms are the state, read per frame.
+  // Missing files and network failures leave the procedural plate; that is the
+  // supported shipped state, so the error path is deliberately silent.
   useEffect(() => {
+    if (!item.photo) return
+    let live = true
     const u = material.uniforms
-    if (!photo) {
+
+    // Paths in site.ts are site-relative; honour Vite's base ('./') so photos
+    // resolve on sub-path deploys, not just when served from the origin root.
+    new TextureLoader().load(
+      import.meta.env.BASE_URL + item.photo,
+      (tex) => {
+        if (!live) {
+          tex.dispose()
+          return
+        }
+        tex.colorSpace = SRGBColorSpace
+        // No mipmaps: their coarser levels are built from the WHOLE image, so
+        // minified samples near the crop edge would bleed rows that cover-fit
+        // deliberately discarded. Linear-only keeps the crop honest.
+        tex.generateMipmaps = false
+        tex.minFilter = LinearFilter
+        tex.anisotropy = Math.min(8, gl.capabilities.getMaxAnisotropy())
+
+        const img = tex.image as { width?: number; height?: number } | undefined
+        const aspect = img?.width && img?.height ? img.width / img.height : PLATE_ASPECT
+        if (aspect > PLATE_ASPECT) {
+          // Wider than the plate: full height, crop the sides.
+          u.uCoverScale.value.set(PLATE_ASPECT / aspect, 1)
+          u.uCoverOffset.value.set((1 - PLATE_ASPECT / aspect) / 2, 0)
+        } else {
+          // Taller than the plate: full width, crop top/bottom.
+          u.uCoverScale.value.set(1, aspect / PLATE_ASPECT)
+          u.uCoverOffset.value.set(0, (1 - aspect / PLATE_ASPECT) / 2)
+        }
+        u.uTexture.value = tex
+      },
+      undefined,
+      () => {
+        /* absent photo → procedural plate stays */
+      },
+    )
+
+    return () => {
+      live = false
+      const bound = u.uTexture.value as Texture
+      // Unbind BEFORE disposing — a frame drawn between dispose and rebind
+      // would make three silently re-upload the disposed texture.
       u.uTexture.value = BLANK
-      return
+      if (bound !== BLANK) bound.dispose()
     }
-    const img = photo.image as { width?: number; height?: number } | undefined
-    const aspect = img?.width && img?.height ? img.width / img.height : PLATE_ASPECT
-    if (aspect > PLATE_ASPECT) {
-      // Wider than the plate: full height, crop the sides.
-      u.uCoverScale.value.set(PLATE_ASPECT / aspect, 1)
-      u.uCoverOffset.value.set((1 - PLATE_ASPECT / aspect) / 2, 0)
-    } else {
-      // Taller than the plate: full width, crop top/bottom.
-      u.uCoverScale.value.set(1, aspect / PLATE_ASPECT)
-      u.uCoverOffset.value.set(0, (1 - aspect / PLATE_ASPECT) / 2)
-    }
-    u.uTexture.value = photo
-  }, [photo, material])
+  }, [item.photo, material, gl])
 
   const angle = index * STEP
 
