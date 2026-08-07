@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Self-contained Vite/R3F project with its own toolchain and tsconfig.
+    "byconfluence-3d/**",
   ]),
 ]);
 
